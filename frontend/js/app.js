@@ -20,18 +20,38 @@ class App {
     setupEventListeners() {
         document.getElementById('generateBtn').addEventListener('click', () => this.generateCode());
         document.getElementById('validateBtn').addEventListener('click', () => this.validateBlueprint());
+        document.getElementById('trainBtn').addEventListener('click', () => this.openTrainModal());
+        document.getElementById('evaluateBtn').addEventListener('click', () => this.openEvalModal());
         document.getElementById('exportBtn').addEventListener('click', () => this.exportBlueprint());
         document.getElementById('importBtn').addEventListener('click', () => document.getElementById('fileInput').click());
         document.getElementById('fileInput').addEventListener('change', (e) => this.importBlueprint(e));
         document.getElementById('clearBtn').addEventListener('click', () => this.clearCanvas());
         
         document.getElementById('closeModal').addEventListener('click', () => this.closeCodeModal());
-        document.querySelector('.modal-overlay').addEventListener('click', () => this.closeCodeModal());
+        document.getElementById('closeTrainModal').addEventListener('click', () => this.closeTrainModal());
+        document.getElementById('closeEvalModal').addEventListener('click', () => this.closeEvalModal());
+        
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                this.closeCodeModal();
+                this.closeTrainModal();
+                this.closeEvalModal();
+            });
+        });
+        
         document.getElementById('copyCode').addEventListener('click', () => this.copyCode());
         document.getElementById('downloadCode').addEventListener('click', () => this.downloadCode());
+        document.getElementById('startTrainingBtn').addEventListener('click', () => this.startTraining());
+        document.getElementById('stopTrainingBtn').addEventListener('click', () => this.stopTraining());
+        document.getElementById('trainAgainBtn').addEventListener('click', () => this.resetTrainModal());
+        document.getElementById('startEvalBtn').addEventListener('click', () => this.startEvaluation());
         
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') this.closeCodeModal();
+            if (e.key === 'Escape') {
+                this.closeCodeModal();
+                this.closeTrainModal();
+                this.closeEvalModal();
+            }
             if ((e.key === 'Delete' || e.key === 'Backspace') && !this.isInputFocused()) {
                 if (this.nodeManager.selectedNode) {
                     this.nodeManager.deleteNode(this.nodeManager.selectedNode.id);
@@ -251,6 +271,336 @@ class App {
             toast.classList.add('removing');
             setTimeout(() => toast.remove(), 300);
         }, 3000);
+    }
+    
+    openTrainModal() {
+        if (this.nodeManager.getNodesArray().length === 0) {
+            this.showToast('Add layers to the canvas first!', 'warning');
+            return;
+        }
+        this.resetTrainModal();
+        document.getElementById('trainModal').classList.add('active');
+    }
+    
+    closeTrainModal() {
+        document.getElementById('trainModal').classList.remove('active');
+    }
+    
+    resetTrainModal() {
+        document.getElementById('trainConfig').style.display = '';
+        document.getElementById('trainProgress').style.display = 'none';
+        document.getElementById('trainResults').style.display = 'none';
+        document.getElementById('stopTrainingBtn').style.display = 'none';
+        document.getElementById('startTrainingBtn').disabled = false;
+        this._trainHistory = null;
+        this._trainChart = null;
+    }
+    
+    async startTraining() {
+        const blueprint = this.getBlueprint();
+        const config = {
+            blueprint,
+            epochs: parseInt(document.getElementById('trainEpochs').value) || 10,
+            learning_rate: parseFloat(document.getElementById('trainLR').value) || 0.001,
+            batch_size: parseInt(document.getElementById('trainBatchSize').value) || 32,
+            optimizer: document.getElementById('trainOptimizer').value,
+            loss_function: document.getElementById('trainLoss').value,
+            scheduler: document.getElementById('trainScheduler').value,
+            weight_decay: parseFloat(document.getElementById('trainWeightDecay').value) || 0.0,
+            step_size: 30,
+            gamma: 0.1,
+            input_size: [
+                parseInt(document.getElementById('trainInputC').value) || 3,
+                parseInt(document.getElementById('trainInputH').value) || 32,
+                parseInt(document.getElementById('trainInputW').value) || 32
+            ],
+            num_classes: parseInt(document.getElementById('trainNumClasses').value) || 10,
+            num_samples: parseInt(document.getElementById('trainSamples').value) || 1000,
+            val_ratio: 0.2
+        };
+        
+        document.getElementById('trainConfig').style.display = 'none';
+        document.getElementById('trainProgress').style.display = '';
+        document.getElementById('trainResults').style.display = 'none';
+        document.getElementById('stopTrainingBtn').style.display = '';
+        document.getElementById('startTrainingBtn').disabled = true;
+        
+        this._trainHistory = { train_loss: [], val_loss: [], train_acc: [], val_acc: [] };
+        this._trainChart = new TrainingChart('trainChart');
+        this._trainLog = [];
+        
+        try {
+            const response = await fetch('http://localhost:8000/train', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config)
+            });
+            
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+                
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+                    const event = JSON.parse(line.slice(6));
+                    this.handleTrainEvent(event);
+                }
+            }
+        } catch (error) {
+            this.showToast('Training failed: ' + error.message, 'error');
+            this.resetTrainModal();
+        }
+    }
+    
+    async stopTraining() {
+        try {
+            await fetch('http://localhost:8000/train/stop', { method: 'POST' });
+            this.showToast('Training stopped', 'info');
+        } catch (e) {}
+    }
+    
+    handleTrainEvent(event) {
+        if (event.type === 'progress') {
+            document.getElementById('trainEpochLabel').textContent = `Epoch ${event.epoch}/${event.total_epochs}`;
+            document.getElementById('trainTimeLabel').textContent = this.formatTime(event.elapsed);
+            document.getElementById('trainProgressBar').style.width = event.progress + '%';
+            document.getElementById('metricTrainLoss').textContent = event.train_loss.toFixed(4);
+            document.getElementById('metricTrainAcc').textContent = event.train_acc.toFixed(1) + '%';
+        }
+        
+        if (event.type === 'epoch_end') {
+            document.getElementById('trainEpochLabel').textContent = `Epoch ${event.epoch}/${event.total_epochs}`;
+            document.getElementById('trainTimeLabel').textContent = this.formatTime(event.elapsed);
+            document.getElementById('trainProgressBar').style.width = ((event.epoch / event.total_epochs) * 100) + '%';
+            document.getElementById('metricTrainLoss').textContent = event.train_loss.toFixed(4);
+            document.getElementById('metricValLoss').textContent = event.val_loss.toFixed(4);
+            document.getElementById('metricTrainAcc').textContent = event.train_acc.toFixed(1) + '%';
+            document.getElementById('metricValAcc').textContent = event.val_acc.toFixed(1) + '%';
+            
+            this._trainHistory = event.history;
+            this._trainChart.update(this._trainHistory);
+            
+            this.addTrainLog(`Epoch ${event.epoch}/${event.total_epochs} | Loss: ${event.train_loss.toFixed(4)} | Val Loss: ${event.val_loss.toFixed(4)} | Acc: ${event.train_acc.toFixed(1)}% | Val Acc: ${event.val_acc.toFixed(1)}%`);
+        }
+        
+        if (event.type === 'complete') {
+            document.getElementById('stopTrainingBtn').style.display = 'none';
+            document.getElementById('trainProgress').style.display = 'none';
+            document.getElementById('trainResults').style.display = '';
+            document.getElementById('resultTrainLoss').textContent = event.final_train_loss.toFixed(4);
+            document.getElementById('resultValLoss').textContent = event.final_val_loss.toFixed(4);
+            document.getElementById('resultTrainAcc').textContent = event.final_train_acc.toFixed(1) + '%';
+            document.getElementById('resultValAcc').textContent = event.final_val_acc.toFixed(1) + '%';
+            document.getElementById('resultParams').textContent = event.total_params.toLocaleString();
+            document.getElementById('resultTime').textContent = this.formatTime(event.total_time);
+            this.showToast('Training complete!', 'success');
+        }
+        
+        if (event.type === 'error') {
+            document.getElementById('stopTrainingBtn').style.display = 'none';
+            this.showToast(event.message, 'error');
+            this.addTrainLog(`ERROR: ${event.message}`);
+        }
+    }
+    
+    addTrainLog(message) {
+        const log = document.getElementById('trainLog');
+        const entry = document.createElement('div');
+        entry.className = 'train-log-entry';
+        entry.textContent = message;
+        log.appendChild(entry);
+        log.scrollTop = log.scrollHeight;
+    }
+    
+    formatTime(seconds) {
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+    
+    openEvalModal() {
+        if (this.nodeManager.getNodesArray().length === 0) {
+            this.showToast('Add layers to the canvas first!', 'warning');
+            return;
+        }
+        document.getElementById('evalConfig').style.display = '';
+        document.getElementById('evalResults').style.display = 'none';
+        document.getElementById('evalModal').classList.add('active');
+    }
+    
+    closeEvalModal() {
+        document.getElementById('evalModal').classList.remove('active');
+    }
+    
+    async startEvaluation() {
+        const blueprint = this.getBlueprint();
+        const config = {
+            blueprint,
+            input_size: [
+                parseInt(document.getElementById('evalInputC').value) || 3,
+                parseInt(document.getElementById('evalInputH').value) || 32,
+                parseInt(document.getElementById('evalInputW').value) || 32
+            ],
+            num_classes: parseInt(document.getElementById('evalNumClasses').value) || 10,
+            num_samples: parseInt(document.getElementById('evalSamples').value) || 500,
+            val_ratio: 0.2,
+            loss_function: document.getElementById('evalLoss').value
+        };
+        
+        document.getElementById('startEvalBtn').disabled = true;
+        document.getElementById('startEvalBtn').textContent = 'Evaluating...';
+        
+        try {
+            const response = await fetch('http://localhost:8000/evaluate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config)
+            });
+            
+            const result = await response.json();
+            
+            if (result.status === 'error') {
+                this.showToast(result.message, 'error');
+                return;
+            }
+            
+            document.getElementById('evalConfig').style.display = 'none';
+            document.getElementById('evalResults').style.display = '';
+            document.getElementById('evalAccuracy').textContent = result.val_accuracy.toFixed(1) + '%';
+            document.getElementById('evalLoss').textContent = result.val_loss.toFixed(4);
+            document.getElementById('evalTotalParams').textContent = result.total_params.toLocaleString();
+            document.getElementById('evalTrainableParams').textContent = result.trainable_params.toLocaleString();
+            document.getElementById('evalNumClassesResult').textContent = result.num_classes;
+            
+            const barsContainer = document.getElementById('classBars');
+            barsContainer.innerHTML = '';
+            
+            if (result.per_class_accuracy) {
+                result.per_class_accuracy.forEach(stat => {
+                    const row = document.createElement('div');
+                    row.className = 'class-bar-row';
+                    row.innerHTML = `
+                        <span class="class-bar-label">Class ${stat.class}</span>
+                        <div class="class-bar-track">
+                            <div class="class-bar-fill" style="width: ${stat.accuracy}%"></div>
+                        </div>
+                        <span class="class-bar-value">${stat.accuracy.toFixed(1)}%</span>
+                    `;
+                    barsContainer.appendChild(row);
+                });
+            }
+            
+            this.showToast('Evaluation complete!', 'success');
+        } catch (error) {
+            this.showToast('Evaluation failed: ' + error.message, 'error');
+        } finally {
+            document.getElementById('startEvalBtn').disabled = false;
+            document.getElementById('startEvalBtn').innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M11.251.068a.5.5 0 01.227.58L9.677 6.5H13a.5.5 0 01.364.843l-8 8.5a.5.5 0 01-.842-.49L6.323 9.5H3a.5.5 0 01-.364-.843l8-8.5a.5.5 0 01.615-.09z"/>
+                </svg>
+                Evaluate
+            `;
+        }
+    }
+}
+
+class TrainingChart {
+    constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d');
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+    }
+    
+    resize() {
+        const rect = this.canvas.parentElement.getBoundingClientRect();
+        this.canvas.width = rect.width * window.devicePixelRatio;
+        this.canvas.height = rect.height * window.devicePixelRatio;
+        this.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        this.width = rect.width;
+        this.height = rect.height;
+    }
+    
+    update(history) {
+        this.ctx.clearRect(0, 0, this.width, this.height);
+        this.drawChart(history.train_loss, history.val_loss, history.train_acc, history.val_acc);
+    }
+    
+    drawChart(trainLoss, valLoss, trainAcc, valAcc) {
+        const padding = { top: 20, right: 20, bottom: 30, left: 50 };
+        const chartW = this.width - padding.left - padding.right;
+        const chartH = this.height - padding.top - padding.bottom;
+        const midY = padding.top + chartH / 2;
+        
+        this.ctx.strokeStyle = 'rgba(42, 42, 74, 0.5)';
+        this.ctx.lineWidth = 1;
+        this.ctx.setLineDash([4, 4]);
+        this.ctx.beginPath();
+        this.ctx.moveTo(padding.left, midY);
+        this.ctx.lineTo(padding.left + chartW, midY);
+        this.ctx.stroke();
+        this.ctx.setLineDash([]);
+        
+        this.drawLines(trainLoss, valLoss, padding, chartW, chartH, 'loss');
+        this.drawLines(trainAcc, valAcc, padding, chartW, chartH, 'acc');
+        
+        this.ctx.font = '11px Inter, sans-serif';
+        this.ctx.fillStyle = '#6366f1';
+        this.ctx.fillText('Train Loss', padding.left, 14);
+        this.ctx.fillStyle = '#ef4444';
+        this.ctx.fillText('Val Loss', padding.left + 80, 14);
+        this.ctx.fillStyle = '#22c55e';
+        this.ctx.fillText('Train Acc', padding.left + 160, 14);
+        this.ctx.fillStyle = '#f59e0b';
+        this.ctx.fillText('Val Acc', padding.left + 240, 14);
+    }
+    
+    drawLines(trainData, valData, padding, chartW, chartH, type) {
+        if (!trainData || trainData.length < 2) return;
+        
+        const epochs = trainData.length;
+        const allValues = [...trainData, ...valData];
+        let minVal = Math.min(...allValues);
+        let maxVal = Math.max(...allValues);
+        
+        if (maxVal === minVal) { maxVal += 1; minVal -= 1; }
+        const range = maxVal - minVal;
+        
+        const getX = (i) => padding.left + (i / (epochs - 1)) * chartW;
+        const getY = (v) => padding.top + chartH - ((v - minVal) / range) * chartH;
+        
+        const colors = { loss: { train: '#6366f1', val: '#ef4444' }, acc: { train: '#22c55e', val: '#f59e0b' } };
+        
+        this.drawLine(trainData, getX, getY, colors[type].train);
+        this.drawLine(valData, getX, getY, colors[type].val);
+    }
+    
+    drawLine(data, getX, getY, color) {
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        data.forEach((v, i) => {
+            const x = getX(i);
+            const y = getY(v);
+            i === 0 ? this.ctx.moveTo(x, y) : this.ctx.lineTo(x, y);
+        });
+        this.ctx.stroke();
+        
+        this.ctx.fillStyle = color;
+        data.forEach((v, i) => {
+            this.ctx.beginPath();
+            this.ctx.arc(getX(i), getY(v), 3, 0, Math.PI * 2);
+            this.ctx.fill();
+        });
     }
 }
 

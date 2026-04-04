@@ -52,6 +52,18 @@
                     </svg>
                     Generate Code
                 </button>
+                <button id="trainBtn" class="btn btn-secondary" title="Train Model">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M11.251.068a.5.5 0 01.227.58L9.677 6.5H13a.5.5 0 01.364.843l-8 8.5a.5.5 0 01-.842-.49L6.323 9.5H3a.5.5 0 01-.364-.843l8-8.5a.5.5 0 01.615-.09z"/>
+                    </svg>
+                    Train
+                </button>
+                <button id="evaluateBtn" class="btn btn-secondary" title="Evaluate Model">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M11.251.068a.5.5 0 01.227.58L9.677 6.5H13a.5.5 0 01.364.843l-8 8.5a.5.5 0 01-.842-.49L6.323 9.5H3a.5.5 0 01-.364-.843l8-8.5a.5.5 0 01.615-.09z"/>
+                    </svg>
+                    Evaluate
+                </button>
                 <button id="exportBtn" class="btn btn-secondary" title="Export Blueprint">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                         <path d="M8 1a.5.5 0 01.5.5v7.793l2.146-2.147a.5.5 0 01.708.708l-3 3a.5.5 0 01-.708 0l-3-3a.5.5 0 11.708-.708L7.5 9.293V1.5A.5.5 0 018 1zM2 13.5a.5.5 0 01.5-.5h11a.5.5 0 010 1h-11a.5.5 0 01-.5-.5z"/>
@@ -603,6 +615,256 @@
                 </div>
                 <div class="modal-body">
                     <pre><code id="generatedCode"></code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="code-modal" id="trainModal">
+            <div class="modal-overlay"></div>
+            <div class="modal-content modal-lg">
+                <div class="modal-header">
+                    <h3>Train Model</h3>
+                    <div class="modal-actions">
+                        <button class="btn btn-danger btn-sm" id="stopTrainingBtn" style="display:none;">
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                                <rect x="2" y="2" width="10" height="10" rx="1"/>
+                            </svg>
+                            Stop
+                        </button>
+                        <button class="modal-close" id="closeTrainModal">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M3.64 3.64a.5.5 0 01.71 0L8 7.29l3.65-3.65a.5.5 0 01.71.71L8.71 8l3.65 3.65a.5.5 0 01-.71.71L8 8.71l-3.65 3.65a.5.5 0 01-.71-.71L7.29 8 3.64 4.35a.5.5 0 010-.71z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <div class="train-config" id="trainConfig">
+                        <div class="train-config-grid">
+                            <div class="property-row">
+                                <label class="property-label">Epochs</label>
+                                <input type="number" class="property-input" id="trainEpochs" value="10" min="1" max="500">
+                            </div>
+                            <div class="property-row">
+                                <label class="property-label">Learning Rate</label>
+                                <input type="number" class="property-input" id="trainLR" value="0.001" min="0.00001" step="0.0001">
+                            </div>
+                            <div class="property-row">
+                                <label class="property-label">Batch Size</label>
+                                <input type="number" class="property-input" id="trainBatchSize" value="32" min="1" step="1">
+                            </div>
+                            <div class="property-row">
+                                <label class="property-label">Optimizer</label>
+                                <select class="property-select" id="trainOptimizer">
+                                    <option value="adam">Adam</option>
+                                    <option value="adamw">AdamW</option>
+                                    <option value="sgd">SGD</option>
+                                    <option value="rmsprop">RMSprop</option>
+                                    <option value="adagrad">Adagrad</option>
+                                </select>
+                            </div>
+                            <div class="property-row">
+                                <label class="property-label">Loss Function</label>
+                                <select class="property-select" id="trainLoss">
+                                    <option value="cross_entropy">Cross Entropy</option>
+                                    <option value="mse">MSE</option>
+                                    <option value="bce">BCE With Logits</option>
+                                    <option value="l1">L1</option>
+                                    <option value="nll">NLL</option>
+                                </select>
+                            </div>
+                            <div class="property-row">
+                                <label class="property-label">Scheduler</label>
+                                <select class="property-select" id="trainScheduler">
+                                    <option value="none">None</option>
+                                    <option value="step_lr">Step LR</option>
+                                    <option value="cosine">Cosine Annealing</option>
+                                    <option value="exponential">Exponential</option>
+                                    <option value="reduce_on_plateau">Reduce on Plateau</option>
+                                </select>
+                            </div>
+                            <div class="property-row">
+                                <label class="property-label">Weight Decay</label>
+                                <input type="number" class="property-input" id="trainWeightDecay" value="0.0" min="0" step="0.0001">
+                            </div>
+                            <div class="property-row">
+                                <label class="property-label">Num Classes</label>
+                                <input type="number" class="property-input" id="trainNumClasses" value="10" min="1">
+                            </div>
+                            <div class="property-row">
+                                <label class="property-label">Input Channels</label>
+                                <input type="number" class="property-input" id="trainInputC" value="3" min="1">
+                            </div>
+                            <div class="property-row">
+                                <label class="property-label">Input Height</label>
+                                <input type="number" class="property-input" id="trainInputH" value="32" min="1">
+                            </div>
+                            <div class="property-row">
+                                <label class="property-label">Input Width</label>
+                                <input type="number" class="property-input" id="trainInputW" value="32" min="1">
+                            </div>
+                            <div class="property-row">
+                                <label class="property-label">Train Samples</label>
+                                <input type="number" class="property-input" id="trainSamples" value="1000" min="100">
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" id="startTrainingBtn" style="margin-top:16px;width:100%;">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M11.251.068a.5.5 0 01.227.58L9.677 6.5H13a.5.5 0 01.364.843l-8 8.5a.5.5 0 01-.842-.49L6.323 9.5H3a.5.5 0 01-.364-.843l8-8.5a.5.5 0 01.615-.09z"/>
+                            </svg>
+                            Start Training
+                        </button>
+                    </div>
+                    <div class="train-progress" id="trainProgress" style="display:none;">
+                        <div class="train-progress-header">
+                            <span class="train-epoch-label" id="trainEpochLabel">Epoch 0/0</span>
+                            <span class="train-time-label" id="trainTimeLabel">0:00</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" id="trainProgressBar"></div>
+                        </div>
+                        <div class="train-metrics">
+                            <div class="metric-card">
+                                <span class="metric-label">Train Loss</span>
+                                <span class="metric-value" id="metricTrainLoss">-</span>
+                            </div>
+                            <div class="metric-card">
+                                <span class="metric-label">Val Loss</span>
+                                <span class="metric-value" id="metricValLoss">-</span>
+                            </div>
+                            <div class="metric-card">
+                                <span class="metric-label">Train Acc</span>
+                                <span class="metric-value" id="metricTrainAcc">-</span>
+                            </div>
+                            <div class="metric-card">
+                                <span class="metric-label">Val Acc</span>
+                                <span class="metric-value" id="metricValAcc">-</span>
+                            </div>
+                        </div>
+                        <div class="train-chart">
+                            <canvas id="trainChart"></canvas>
+                        </div>
+                        <div class="train-log" id="trainLog"></div>
+                    </div>
+                    <div class="train-results" id="trainResults" style="display:none;">
+                        <h4 class="results-title">Training Complete</h4>
+                        <div class="results-grid">
+                            <div class="result-item">
+                                <span class="result-label">Final Train Loss</span>
+                                <span class="result-value" id="resultTrainLoss">-</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Final Val Loss</span>
+                                <span class="result-value" id="resultValLoss">-</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Final Train Acc</span>
+                                <span class="result-value" id="resultTrainAcc">-</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Final Val Acc</span>
+                                <span class="result-value" id="resultValAcc">-</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Total Params</span>
+                                <span class="result-value" id="resultParams">-</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Total Time</span>
+                                <span class="result-value" id="resultTime">-</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary" id="trainAgainBtn" style="margin-top:16px;">
+                            Train Again
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="code-modal" id="evalModal">
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Evaluate Model</h3>
+                    <div class="modal-actions">
+                        <button class="modal-close" id="closeEvalModal">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M3.64 3.64a.5.5 0 01.71 0L8 7.29l3.65-3.65a.5.5 0 01.71.71L8.71 8l3.65 3.65a.5.5 0 01-.71.71L8 8.71l-3.65 3.65a.5.5 0 01-.71-.71L7.29 8 3.64 4.35a.5.5 0 010-.71z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <div class="eval-config" id="evalConfig">
+                        <div class="train-config-grid">
+                            <div class="property-row">
+                                <label class="property-label">Num Classes</label>
+                                <input type="number" class="property-input" id="evalNumClasses" value="10" min="1">
+                            </div>
+                            <div class="property-row">
+                                <label class="property-label">Input Channels</label>
+                                <input type="number" class="property-input" id="evalInputC" value="3" min="1">
+                            </div>
+                            <div class="property-row">
+                                <label class="property-label">Input Height</label>
+                                <input type="number" class="property-input" id="evalInputH" value="32" min="1">
+                            </div>
+                            <div class="property-row">
+                                <label class="property-label">Input Width</label>
+                                <input type="number" class="property-input" id="evalInputW" value="32" min="1">
+                            </div>
+                            <div class="property-row">
+                                <label class="property-label">Test Samples</label>
+                                <input type="number" class="property-input" id="evalSamples" value="500" min="100">
+                            </div>
+                            <div class="property-row">
+                                <label class="property-label">Loss Function</label>
+                                <select class="property-select" id="evalLoss">
+                                    <option value="cross_entropy">Cross Entropy</option>
+                                    <option value="mse">MSE</option>
+                                    <option value="bce">BCE With Logits</option>
+                                    <option value="l1">L1</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" id="startEvalBtn" style="margin-top:16px;width:100%;">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M11.251.068a.5.5 0 01.227.58L9.677 6.5H13a.5.5 0 01.364.843l-8 8.5a.5.5 0 01-.842-.49L6.323 9.5H3a.5.5 0 01-.364-.843l8-8.5a.5.5 0 01.615-.09z"/>
+                            </svg>
+                            Evaluate
+                        </button>
+                    </div>
+                    <div class="eval-results" id="evalResults" style="display:none;">
+                        <div class="eval-summary">
+                            <div class="eval-metric-big">
+                                <span class="eval-metric-value" id="evalAccuracy">-</span>
+                                <span class="eval-metric-label">Accuracy</span>
+                            </div>
+                            <div class="eval-metric-big">
+                                <span class="eval-metric-value" id="evalLoss">-</span>
+                                <span class="eval-metric-label">Loss</span>
+                            </div>
+                        </div>
+                        <div class="eval-details">
+                            <div class="result-item">
+                                <span class="result-label">Total Parameters</span>
+                                <span class="result-value" id="evalTotalParams">-</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Trainable Parameters</span>
+                                <span class="result-value" id="evalTrainableParams">-</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Num Classes</span>
+                                <span class="result-value" id="evalNumClassesResult">-</span>
+                            </div>
+                        </div>
+                        <div class="per-class-accuracy" id="perClassAccuracy">
+                            <h4 class="results-title">Per-Class Accuracy</h4>
+                            <div class="class-bars" id="classBars"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
