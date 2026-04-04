@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NNFactory - Neural Network Blueprint Maker</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="app">
+        <header class="header">
+            <div class="header-left">
+                <h1 class="logo">
+                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                        <circle cx="8" cy="8" r="4" fill="#6366f1"/>
+                        <circle cx="24" cy="8" r="4" fill="#8b5cf6"/>
+                        <circle cx="8" cy="24" r="4" fill="#a855f7"/>
+                        <circle cx="24" cy="24" r="4" fill="#d946ef"/>
+                        <line x1="8" y1="8" x2="24" y2="8" stroke="#6366f1" stroke-width="2"/>
+                        <line x1="8" y1="8" x2="8" y2="24" stroke="#6366f1" stroke-width="2"/>
+                        <line x1="24" y1="8" x2="24" y2="24" stroke="#8b5cf6" stroke-width="2"/>
+                        <line x1="8" y1="24" x2="24" y2="24" stroke="#a855f7" stroke-width="2"/>
+                        <line x1="8" y1="8" x2="24" y2="24" stroke="#d946ef" stroke-width="1" opacity="0.5"/>
+                        <line x1="24" y1="8" x2="8" y2="24" stroke="#8b5cf6" stroke-width="1" opacity="0.5"/>
+                    </svg>
+                    NNFactory
+                </h1>
+            </div>
+            <div class="header-center">
+                <input type="text" id="modelName" class="model-name-input" value="NeuralNetwork" placeholder="Model Name">
+            </div>
+            <div class="header-right">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="useJit">
+                    <span class="slider"></span>
+                    <span class="label-text">JIT</span>
+                </label>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="useCompile" checked>
+                    <span class="slider"></span>
+                    <span class="label-text">Compile</span>
+                </label>
+                <button id="validateBtn" class="btn btn-secondary" title="Validate Blueprint">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8 0a8 8 0 100 16A8 8 0 008 0zm3.78 5.22a.75.75 0 010 1.06l-4 4a.75.75 0 01-1.06 0l-2-2a.75.75 0 111.06-1.06L7 8.44l3.22-3.22a.75.75 0 011.06 0z"/>
+                    </svg>
+                    Validate
+                </button>
+                <button id="generateBtn" class="btn btn-primary" title="Generate PyTorch Code">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M2 2l6 6-6 6V2zm6 0l6 6-6 6V2z" transform="translate(1,0)"/>
+                    </svg>
+                    Generate Code
+                </button>
+                <button id="exportBtn" class="btn btn-secondary" title="Export Blueprint">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8 1a.5.5 0 01.5.5v7.793l2.146-2.147a.5.5 0 01.708.708l-3 3a.5.5 0 01-.708 0l-3-3a.5.5 0 11.708-.708L7.5 9.293V1.5A.5.5 0 018 1zM2 13.5a.5.5 0 01.5-.5h11a.5.5 0 010 1h-11a.5.5 0 01-.5-.5z"/>
+                    </svg>
+                    Export
+                </button>
+                <button id="importBtn" class="btn btn-secondary" title="Import Blueprint">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M.5 9.9a.5.5 0 01.5.5v2.5a1 1 0 001 1h12a1 1 0 001-1v-2.5a.5.5 0 011 0v2.5a2 2 0 01-2 2H2a2 2 0 01-2-2v-2.5a.5.5 0 01.5-.5zM7.646 11.854a.5.5 0 00.708 0l3-3a.5.5 0 00-.708-.708L8.5 10.293V1.5a.5.5 0 00-1 0v8.793L5.354 8.146a.5.5 0 10-.708.708l3 3z"/>
+                    </svg>
+                    Import
+                </button>
+                <button id="clearBtn" class="btn btn-danger" title="Clear Canvas">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6zM14.5 3a1 1 0 00-1-1H13V1a.5.5 0 00-1 0v1H8V1a.5.5 0 00-1 0v1H5.5l-.707-.707A.5.5 0 004 1.5v.5H2.5a.5.5 0 000 1H3v10a1 1 0 001 1h8a1 1 0 001-1V3h.5a.5.5 0 00.5-.5zM5 2h6v1H5V2zM4 3h8v10H4V3z"/>
+                    </svg>
+                    Clear
+                </button>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-section">
+                    <h3 class="section-title">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                            <rect x="1" y="1" width="5" height="5" rx="1"/>
+                            <rect x="8" y="1" width="5" height="5" rx="1"/>
+                            <rect x="1" y="8" width="5" height="5" rx="1"/>
+                            <rect x="8" y="8" width="5" height="5" rx="1"/>
+                        </svg>
+                        Layers
+                    </h3>
+                    
+                    <div class="layer-category">
+                        <div class="category-header" data-category="conv">
+                            <span class="category-icon">
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                                    <rect x="1" y="1" width="10" height="10" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                    <line x1="4" y1="1" x2="4" y2="11" stroke="currentColor" stroke-width="0.5"/>
+                                    <line x1="8" y1="1" x2="8" y2="11" stroke="currentColor" stroke-width="0.5"/>
+                                    <line x1="1" y1="4" x2="11" y2="4" stroke="currentColor" stroke-width="0.5"/>
+                                    <line x1="1" y1="8" x2="11" y2="8" stroke="currentColor" stroke-width="0.5"/>
+                                </svg>
+                            </span>
+                            Convolution
+                            <span class="category-arrow">▼</span>
+                        </div>
+                        <div class="category-content" data-category="conv">
+                            <div class="layer-item" draggable="true" data-type="conv2d">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <rect x="2" y="2" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                        <rect x="5" y="5" width="6" height="6" rx="1" fill="currentColor" opacity="0.5"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">Conv2d</span>
+                            </div>
+                            <div class="layer-item" draggable="true" data-type="conv1d">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <rect x="3" y="4" width="10" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                        <rect x="6" y="6" width="4" height="4" rx="1" fill="currentColor" opacity="0.5"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">Conv1d</span>
+                            </div>
+                            <div class="layer-item" draggable="true" data-type="convtranspose2d">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <rect x="1" y="1" width="6" height="6" rx="1" fill="currentColor" opacity="0.5"/>
+                                        <rect x="9" y="9" width="6" height="6" rx="1" fill="currentColor" opacity="0.5"/>
+                                        <path d="M7 7l2 2" stroke="currentColor" stroke-width="1.5"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">ConvTranspose2d</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="layer-category">
+                        <div class="category-header" data-category="pool">
+                            <span class="category-icon">
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                                    <rect x="1" y="1" width="10" height="10" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                    <path d="M3 6l2 2 4-4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                                </svg>
+                            </span>
+                            Pooling
+                            <span class="category-arrow">▼</span>
+                        </div>
+                        <div class="category-content" data-category="pool">
+                            <div class="layer-item" draggable="true" data-type="maxpool2d">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <rect x="2" y="2" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                        <path d="M5 10l2-4 2 2 2-3" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">MaxPool2d</span>
+                            </div>
+                            <div class="layer-item" draggable="true" data-type="avgpool2d">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <rect x="2" y="2" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                        <line x1="5" y1="8" x2="11" y2="8" stroke="currentColor" stroke-width="1.5"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">AvgPool2d</span>
+                            </div>
+                            <div class="layer-item" draggable="true" data-type="adaptive_avgpool2d">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <rect x="2" y="2" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                        <circle cx="8" cy="8" r="2" fill="currentColor" opacity="0.5"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">AdaptiveAvgPool2d</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="layer-category">
+                        <div class="category-header" data-category="linear">
+                            <span class="category-icon">
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                                    <circle cx="3" cy="3" r="2" fill="none" stroke="currentColor" stroke-width="1"/>
+                                    <circle cx="9" cy="3" r="2" fill="none" stroke="currentColor" stroke-width="1"/>
+                                    <circle cx="3" cy="9" r="2" fill="none" stroke="currentColor" stroke-width="1"/>
+                                    <circle cx="9" cy="9" r="2" fill="none" stroke="currentColor" stroke-width="1"/>
+                                </svg>
+                            </span>
+                            Linear / Dense
+                            <span class="category-arrow">▼</span>
+                        </div>
+                        <div class="category-content" data-category="linear">
+                            <div class="layer-item" draggable="true" data-type="linear">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <circle cx="4" cy="4" r="2.5" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                        <circle cx="12" cy="4" r="2.5" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                        <circle cx="4" cy="12" r="2.5" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                        <circle cx="12" cy="12" r="2.5" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                        <line x1="6.5" y1="4" x2="9.5" y2="4" stroke="currentColor" stroke-width="1"/>
+                                        <line x1="6.5" y1="12" x2="9.5" y2="12" stroke="currentColor" stroke-width="1"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">Linear</span>
+                            </div>
+                            <div class="layer-item" draggable="true" data-type="embedding">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <rect x="2" y="3" width="12" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                        <line x1="5" y1="3" x2="5" y2="13" stroke="currentColor" stroke-width="1"/>
+                                        <line x1="8" y1="3" x2="8" y2="13" stroke="currentColor" stroke-width="1"/>
+                                        <line x1="11" y1="3" x2="11" y2="13" stroke="currentColor" stroke-width="1"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">Embedding</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="layer-category">
+                        <div class="category-header" data-category="norm">
+                            <span class="category-icon">
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                                    <path d="M1 6h10M6 1v10" stroke="currentColor" stroke-width="1.5"/>
+                                    <circle cx="6" cy="6" r="4" fill="none" stroke="currentColor" stroke-width="1"/>
+                                </svg>
+                            </span>
+                            Normalization
+                            <span class="category-arrow">▼</span>
+                        </div>
+                        <div class="category-content" data-category="norm">
+                            <div class="layer-item" draggable="true" data-type="batchnorm2d">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <rect x="2" y="2" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                        <path d="M5 8a3 3 0 006 0" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">BatchNorm2d</span>
+                            </div>
+                            <div class="layer-item" draggable="true" data-type="batchnorm1d">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <rect x="3" y="4" width="10" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                        <path d="M6 8a2 2 0 004 0" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">BatchNorm1d</span>
+                            </div>
+                            <div class="layer-item" draggable="true" data-type="layernorm">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                        <path d="M5 8a3 3 0 006 0" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">LayerNorm</span>
+                            </div>
+                            <div class="layer-item" draggable="true" data-type="groupnorm">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <rect x="2" y="2" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                        <line x1="6" y1="2" x2="6" y2="14" stroke="currentColor" stroke-width="1"/>
+                                        <line x1="10" y1="2" x2="10" y2="14" stroke="currentColor" stroke-width="1"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">GroupNorm</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="layer-category">
+                        <div class="category-header" data-category="activation">
+                            <span class="category-icon">
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                                    <path d="M1 11 Q4 1 6 6 T11 1" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                </svg>
+                            </span>
+                            Activation
+                            <span class="category-arrow">▼</span>
+                        </div>
+                        <div class="category-content" data-category="activation">
+                            <div class="layer-item" draggable="true" data-type="relu">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <path d="M2 12 L6 12 L14 4" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">ReLU</span>
+                            </div>
+                            <div class="layer-item" draggable="true" data-type="leakyrelu">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <path d="M2 12 L6 12 L14 4" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                        <path d="M2 12 L6 10" fill="none" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">LeakyReLU</span>
+                            </div>
+                            <div class="layer-item" draggable="true" data-type="gelu">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <path d="M2 10 Q5 2 8 8 T14 6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">GELU</span>
+                            </div>
+                            <div class="layer-item" draggable="true" data-type="sigmoid">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <path d="M2 12 Q8 12 8 8 Q8 4 14 4" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">Sigmoid</span>
+                            </div>
+                            <div class="layer-item" draggable="true" data-type="tanh">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <path d="M2 14 Q6 14 8 8 Q10 2 14 2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">Tanh</span>
+                            </div>
+                            <div class="layer-item" draggable="true" data-type="softmax">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <path d="M2 14 Q5 14 6 10 Q7 6 10 6 Q13 6 14 2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">Softmax</span>
+                            </div>
+                            <div class="layer-item" draggable="true" data-type="silu">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <path d="M2 14 Q4 14 5 12 Q6 8 8 8 Q10 8 12 4 L14 2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">SiLU</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="layer-category">
+                        <div class="category-header" data-category="transformer">
+                            <span class="category-icon">
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                                    <rect x="1" y="1" width="10" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1"/>
+                                    <path d="M3 4h6M3 6h6M3 8h6" stroke="currentColor" stroke-width="0.75"/>
+                                </svg>
+                            </span>
+                            Transformer
+                            <span class="category-arrow">▼</span>
+                        </div>
+                        <div class="category-content" data-category="transformer">
+                            <div class="layer-item" draggable="true" data-type="multiheadattention">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <circle cx="4" cy="4" r="2" fill="none" stroke="currentColor" stroke-width="1"/>
+                                        <circle cx="12" cy="4" r="2" fill="none" stroke="currentColor" stroke-width="1"/>
+                                        <circle cx="4" cy="12" r="2" fill="none" stroke="currentColor" stroke-width="1"/>
+                                        <circle cx="12" cy="12" r="2" fill="none" stroke="currentColor" stroke-width="1"/>
+                                        <line x1="6" y1="4" x2="10" y2="4" stroke="currentColor" stroke-width="0.75"/>
+                                        <line x1="6" y1="12" x2="10" y2="12" stroke="currentColor" stroke-width="0.75"/>
+                                        <line x1="4" y1="6" x2="4" y2="10" stroke="currentColor" stroke-width="0.75"/>
+                                        <line x1="12" y1="6" x2="12" y2="10" stroke="currentColor" stroke-width="0.75"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">MultiheadAttention</span>
+                            </div>
+                            <div class="layer-item" draggable="true" data-type="transformerencoderlayer">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <rect x="2" y="2" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                        <path d="M5 5h6M5 8h6M5 11h6" stroke="currentColor" stroke-width="1"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">TransformerEncoderLayer</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="layer-category">
+                        <div class="category-header" data-category="rnn">
+                            <span class="category-icon">
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                                    <circle cx="6" cy="6" r="4" fill="none" stroke="currentColor" stroke-width="1"/>
+                                    <path d="M6 2a4 4 0 010 8" stroke="currentColor" stroke-width="1" fill="none"/>
+                                    <path d="M8 4 L6 6 L8 8" stroke="currentColor" stroke-width="0.75" fill="none"/>
+                                </svg>
+                            </span>
+                            Recurrent (RNN)
+                            <span class="category-arrow">▼</span>
+                        </div>
+                        <div class="category-content" data-category="rnn">
+                            <div class="layer-item" draggable="true" data-type="lstm">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <rect x="2" y="4" width="12" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                        <path d="M5 6v4M8 6v4M11 6v4" stroke="currentColor" stroke-width="1"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">LSTM</span>
+                            </div>
+                            <div class="layer-item" draggable="true" data-type="gru">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <rect x="2" y="4" width="12" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                        <path d="M6 6v4M10 6v4" stroke="currentColor" stroke-width="1"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">GRU</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="layer-category">
+                        <div class="category-header" data-category="regularization">
+                            <span class="category-icon">
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                                    <circle cx="3" cy="3" r="1" fill="currentColor"/>
+                                    <circle cx="9" cy="3" r="1" fill="currentColor"/>
+                                    <circle cx="3" cy="9" r="1" fill="currentColor"/>
+                                    <circle cx="9" cy="9" r="1" fill="currentColor"/>
+                                    <circle cx="6" cy="6" r="1" fill="currentColor"/>
+                                </svg>
+                            </span>
+                            Regularization
+                            <span class="category-arrow">▼</span>
+                        </div>
+                        <div class="category-content" data-category="regularization">
+                            <div class="layer-item" draggable="true" data-type="dropout">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <circle cx="4" cy="4" r="2" fill="currentColor" opacity="0.3"/>
+                                        <circle cx="12" cy="4" r="2" fill="currentColor"/>
+                                        <circle cx="4" cy="12" r="2" fill="currentColor"/>
+                                        <circle cx="12" cy="12" r="2" fill="currentColor" opacity="0.3"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">Dropout</span>
+                            </div>
+                            <div class="layer-item" draggable="true" data-type="dropout2d">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <rect x="2" y="2" width="5" height="5" rx="1" fill="currentColor" opacity="0.3"/>
+                                        <rect x="9" y="2" width="5" height="5" rx="1" fill="currentColor"/>
+                                        <rect x="2" y="9" width="5" height="5" rx="1" fill="currentColor"/>
+                                        <rect x="9" y="9" width="5" height="5" rx="1" fill="currentColor" opacity="0.3"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">Dropout2d</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="layer-category">
+                        <div class="category-header" data-category="utility">
+                            <span class="category-icon">
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                                    <path d="M2 6h8M6 2v8" stroke="currentColor" stroke-width="1.5"/>
+                                </svg>
+                            </span>
+                            Utility
+                            <span class="category-arrow">▼</span>
+                        </div>
+                        <div class="category-content" data-category="utility">
+                            <div class="layer-item" draggable="true" data-type="input">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <path d="M2 8h10M9 5l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">Input</span>
+                            </div>
+                            <div class="layer-item" draggable="true" data-type="flatten">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <rect x="2" y="2" width="5" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                        <rect x="9" y="6" width="5" height="1.5" rx="0.5" fill="currentColor"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">Flatten</span>
+                            </div>
+                            <div class="layer-item" draggable="true" data-type="upsample">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <rect x="2" y="2" width="5" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                        <rect x="9" y="9" width="5" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                        <path d="M7 7l2 2" stroke="currentColor" stroke-width="1"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">Upsample</span>
+                            </div>
+                            <div class="layer-item" draggable="true" data-type="pixelshuffle">
+                                <span class="layer-icon">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <rect x="4" y="4" width="8" height="8" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                        <line x1="8" y1="4" x2="8" y2="12" stroke="currentColor" stroke-width="0.75"/>
+                                        <line x1="4" y1="8" x2="12" y2="8" stroke="currentColor" stroke-width="0.75"/>
+                                    </svg>
+                                </span>
+                                <span class="layer-name">PixelShuffle</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3 class="section-title">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                            <path d="M1 7h12M7 1v12" stroke="currentColor" stroke-width="1.5"/>
+                        </svg>
+                        Quick Add
+                    </h3>
+                    <button class="quick-add-btn" id="addInputBtn">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                            <path d="M2 7h8M7 4v6" stroke="currentColor" stroke-width="1.5"/>
+                        </svg>
+                        Add Input Node
+                    </button>
+                    <button class="quick-add-btn" id="addOutputBtn">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                            <path d="M4 7h8M9 4v6" stroke="currentColor" stroke-width="1.5"/>
+                        </svg>
+                        Add Output Node
+                    </button>
+                </div>
+            </aside>
+
+            <main class="canvas-container" id="canvasContainer">
+                <div class="canvas-wrapper">
+                    <canvas id="mainCanvas"></canvas>
+                    <svg id="connectionSvg"></svg>
+                </div>
+                <div class="canvas-controls">
+                    <button class="canvas-control-btn" id="zoomIn" title="Zoom In">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 1.5a5.5 5.5 0 110 11 5.5 5.5 0 010-11zM7 4v3H4v2h3v3h2V9h3V7H9V4H7z"/>
+                        </svg>
+                    </button>
+                    <button class="canvas-control-btn" id="zoomOut" title="Zoom Out">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 1.5a5.5 5.5 0 110 11 5.5 5.5 0 010-11zM4 7h8v2H4V7z"/>
+                        </svg>
+                    </button>
+                    <button class="canvas-control-btn" id="zoomReset" title="Reset Zoom">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M1 8a7 7 0 0112.95-3.69l1.42-1.42A.75.75 0 0116.5 3.5v4a.75.75 0 01-.75.75h-4a.75.75 0 01-.53-1.28l1.36-1.36A5.5 5.5 0 002.5 8a.75.75 0 01-1.5 0zM15 8a7 7 0 01-12.95 3.69l-1.42 1.42a.75.75 0 01-1.13-.61v-4a.75.75 0 01.75-.75h4a.75.75 0 01.53 1.28l-1.36 1.36A5.5 5.5 0 0013.5 8a.75.75 0 011.5 0z"/>
+                        </svg>
+                    </button>
+                    <span class="zoom-level" id="zoomLevel">100%</span>
+                </div>
+                <div class="canvas-info">
+                    <span id="nodeCount">Nodes: 0</span>
+                    <span id="connCount">Connections: 0</span>
+                </div>
+            </main>
+
+            <aside class="properties-panel" id="propertiesPanel">
+                <div class="panel-header">
+                    <h3>Properties</h3>
+                    <button class="panel-close" id="closeProperties">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                            <path d="M3.14 3.14a.5.5 0 01.71 0L7 6.29l3.15-3.15a.5.5 0 01.71.71L7.71 7l3.15 3.15a.5.5 0 01-.71.71L7 7.71l-3.15 3.15a.5.5 0 01-.71-.71L6.29 7 3.14 3.85a.5.5 0 010-.71z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="panel-content" id="propertiesContent">
+                    <div class="empty-state">
+                        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                            <rect x="8" y="8" width="32" height="32" rx="4" fill="none" stroke="currentColor" stroke-width="2" opacity="0.3"/>
+                            <path d="M16 24h16M24 16v16" stroke="currentColor" stroke-width="2" opacity="0.3"/>
+                        </svg>
+                        <p>Select a node to edit properties</p>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <div class="code-modal" id="codeModal">
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Generated PyTorch Code</h3>
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary btn-sm" id="copyCode">
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                                <rect x="4" y="4" width="8" height="8" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                <path d="M10 4V3a1 1 0 00-1-1H3a1 1 0 00-1 1v6a1 1 0 001 1h1" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                            </svg>
+                            Copy
+                        </button>
+                        <button class="btn btn-primary btn-sm" id="downloadCode">
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                                <path d="M7 1v7M4 5l3 3 3-3M2 10v2a1 1 0 001 1h8a1 1 0 001-1v-2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                            </svg>
+                            Download
+                        </button>
+                        <button class="modal-close" id="closeModal">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M3.64 3.64a.5.5 0 01.71 0L8 7.29l3.65-3.65a.5.5 0 01.71.71L8.71 8l3.65 3.65a.5.5 0 01-.71.71L8 8.71l-3.65 3.65a.5.5 0 01-.71-.71L7.29 8 3.64 4.35a.5.5 0 010-.71z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <pre><code id="generatedCode"></code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="toast-container" id="toastContainer"></div>
+    </div>
+
+    <input type="file" id="fileInput" accept=".json" style="display: none;">
+
+    <script src="js/canvas.js"></script>
+    <script src="js/nodes.js"></script>
+    <script src="js/connections.js"></script>
+    <script src="js/properties.js"></script>
+    <script src="js/codegen.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
