@@ -183,14 +183,14 @@ class App {
     
     exportBlueprint() {
         const blueprint = this.getBlueprint();
-        const blob = new Blob([JSON.stringify(blueprint, null, 2)], { type: 'application/json' });
+        const blob = new Blob([JSON.stringify(blueprint, null, 2)], { type: 'application/octet-stream' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${blueprint.model_name.toLowerCase()}_blueprint.json`;
+        a.download = `${blueprint.model_name.toLowerCase()}.nn`;
         a.click();
         URL.revokeObjectURL(url);
-        this.showToast('Blueprint exported!', 'success');
+        this.showToast('Blueprint saved!', 'success');
     }
     
     importBlueprint(e) {
@@ -216,9 +216,9 @@ class App {
                 }
                 
                 this.renderConnections();
-                this.showToast('Blueprint imported successfully!', 'success');
+                this.showToast('Blueprint loaded!', 'success');
             } catch (error) {
-                this.showToast('Failed to import blueprint: ' + error.message, 'error');
+                this.showToast('Invalid blueprint file!', 'error');
             }
         };
         reader.readAsText(file);

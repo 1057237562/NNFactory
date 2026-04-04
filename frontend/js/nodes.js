@@ -200,24 +200,27 @@ class NodeManager {
         
         e.stopPropagation();
         this.draggingNode = node;
-        this.dragOffsetX = e.clientX;
-        this.dragOffsetY = e.clientY;
         
         const el = document.getElementById(node.id);
+        const rect = el.getBoundingClientRect();
+        this.dragOffsetX = e.clientX - rect.left;
+        this.dragOffsetY = e.clientY - rect.top;
+        
         el.classList.add('dragging');
+        el.style.transition = 'none';
         
         const onMouseMove = (e) => {
-            const dx = (e.clientX - this.dragOffsetX) / this.canvas.scale;
-            const dy = (e.clientY - this.dragOffsetY) / this.canvas.scale;
+            if (!this.draggingNode) return;
             
-            node.x = this.canvas.snapToGrid(node.x + dx);
-            node.y = this.canvas.snapToGrid(node.y + dy);
+            const containerRect = this.canvas.container.getBoundingClientRect();
+            const rawX = (e.clientX - containerRect.left - this.dragOffsetX) / this.canvas.scale;
+            const rawY = (e.clientY - containerRect.top - this.dragOffsetY) / this.canvas.scale;
+            
+            node.x = rawX;
+            node.y = rawY;
             
             el.style.left = node.x + 'px';
             el.style.top = node.y + 'px';
-            
-            this.dragOffsetX = e.clientX;
-            this.dragOffsetY = e.clientY;
             
             if (window.app && window.app.connectionManager) {
                 window.app.connectionManager.render();
@@ -226,9 +229,20 @@ class NodeManager {
         
         const onMouseUp = () => {
             el.classList.remove('dragging');
+            el.style.transition = '';
+            
+            node.x = this.canvas.snapToGrid(node.x);
+            node.y = this.canvas.snapToGrid(node.y);
+            el.style.left = node.x + 'px';
+            el.style.top = node.y + 'px';
+            
             this.draggingNode = null;
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
+            
+            if (window.app && window.app.connectionManager) {
+                window.app.connectionManager.render();
+            }
         };
         
         document.addEventListener('mousemove', onMouseMove);
