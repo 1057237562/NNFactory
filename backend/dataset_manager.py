@@ -2,6 +2,7 @@ import os
 import json
 import shutil
 import hashlib
+import time
 import numpy as np
 from PIL import Image
 from typing import Any
@@ -32,12 +33,16 @@ class DatasetInfo:
 class DatasetManager:
     DATASETS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "datasets")
     CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "backend", ".dataset_cache")
+    MAX_ROWS_FOR_STATS = 50000
 
     def __init__(self):
         os.makedirs(self.DATASETS_DIR, exist_ok=True)
         os.makedirs(self.CACHE_DIR, exist_ok=True)
         self._datasets: dict[str, DatasetInfo] = {}
         self._load_registry()
+        self._viz_cache: dict[str, tuple[Any, float]] = {}
+        self._col_cache: dict[str, tuple[Any, float]] = {}
+        self._cache_ttl = 300
 
     def _registry_path(self) -> str:
         return os.path.join(self.CACHE_DIR, "registry.json")
@@ -397,6 +402,13 @@ class DatasetManager:
         }
 
     def get_visualization(self, dataset_id: str) -> dict:
+        now = time.time()
+        cache_key = f"viz_{dataset_id}"
+        if cache_key in self._viz_cache:
+            cached, ts = self._viz_cache[cache_key]
+            if now - ts < self._cache_ttl:
+                return {"valid": True, "visualization": cached}
+
         info = self._datasets.get(dataset_id)
         if not info:
             return {"valid": False, "errors": ["Dataset not found"]}
@@ -480,9 +492,30 @@ class DatasetManager:
                     pass
             viz["shape_distribution"] = shapes
 
+        self._viz_cache[cache_key] = (viz, now)
         return {"valid": True, "visualization": viz}
 
+    def _load_csv_rows(self, info, max_rows: int = None):
+        import csv
+        with open(info.file_path, "r", encoding="utf-8-sig") as f:
+            reader = csv.DictReader(f)
+            if max_rows and max_rows > 0:
+                rows = []
+                for i, row in enumerate(reader):
+                    if i >= max_rows:
+                        break
+                    rows.append(row)
+                return rows
+            return list(reader)
+
     def get_column_stats(self, dataset_id: str, column: str = None) -> dict:
+        now = time.time()
+        cache_key = f"col_{dataset_id}_{column or 'all'}"
+        if cache_key in self._col_cache:
+            cached, ts = self._col_cache[cache_key]
+            if now - ts < self._cache_ttl:
+                return {"valid": True, "column_stats": cached}
+
         info = self._datasets.get(dataset_id)
         if not info:
             return {"valid": False, "errors": ["Dataset not found"]}
@@ -490,12 +523,9 @@ class DatasetManager:
         if info.dataset_type != "tabular_csv":
             return {"valid": False, "errors": ["Only tabular CSV datasets support column statistics"]}
 
-        import csv
         import traceback
         try:
-            with open(info.file_path, "r", encoding="utf-8-sig") as f:
-                reader = csv.DictReader(f)
-                rows = list(reader)
+            rows = self._load_csv_rows(info, self.MAX_ROWS_FOR_STATS)
 
             if not rows:
                 return {"valid": False, "errors": ["No data rows"]}
@@ -626,6 +656,7 @@ class DatasetManager:
                         "counts": list(sorted_counts.values()),
                     }
 
+            self._col_cache[cache_key] = (result, now)
             return {"valid": True, "column_stats": result}
 
         except KeyError as e:

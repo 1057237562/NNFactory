@@ -2,6 +2,8 @@ import json
 import os
 import tempfile
 import shutil
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from fastapi import FastAPI, UploadFile, File, Form, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -12,6 +14,7 @@ from training_engine import TrainingEngine
 from dataset_manager import DatasetManager
 
 app = FastAPI(title="NNFactory Backend", version="1.0.0")
+executor = ThreadPoolExecutor(max_workers=4)
 
 app.add_middleware(
     CORSMiddleware,
@@ -220,11 +223,13 @@ async def preview_dataset(dataset_id: str, limit: int = Query(10, ge=1, le=50)):
 
 @app.get("/datasets/{dataset_id}/visualize")
 async def visualize_dataset(dataset_id: str):
-    return dataset_manager.get_visualization(dataset_id)
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(executor, dataset_manager.get_visualization, dataset_id)
 
 @app.get("/datasets/{dataset_id}/column-stats")
 async def column_stats(dataset_id: str, column: Optional[str] = Query(None)):
-    return dataset_manager.get_column_stats(dataset_id, column)
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(executor, dataset_manager.get_column_stats, dataset_id, column)
 
 @app.get("/datasets/{dataset_id}/config")
 async def get_dataloader_config(dataset_id: str):
