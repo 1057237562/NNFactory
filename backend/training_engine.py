@@ -3,19 +3,22 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 import importlib.util
-import tempfile
 import os
 import time
 import traceback
+from datetime import datetime
 
 
 class TrainingEngine:
+    TEMP_DIR = os.path.join(os.path.dirname(__file__), "temp")
+
     def __init__(self, blueprint, code_generator):
         self.blueprint = blueprint
         self.code_generator = code_generator
         self.is_training = False
         self.should_stop = False
         self._temp_path = None
+        os.makedirs(self.TEMP_DIR, exist_ok=True)
 
     def _build_model(self):
         code = self.code_generator.generate()
@@ -24,10 +27,11 @@ class TrainingEngine:
         model_class = getattr(module, self.blueprint.model_name)
         return model_class()
 
-    @staticmethod
-    def _write_temp_module(code):
-        fd, path = tempfile.mkstemp(suffix=".py", prefix="nnfactory_")
-        with os.fdopen(fd, "w") as f:
+    def _write_temp_module(self, code):
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{self.blueprint.model_name}_{timestamp}.py"
+        path = os.path.join(self.TEMP_DIR, filename)
+        with open(path, "w") as f:
             f.write(code)
         return path
 
@@ -39,11 +43,6 @@ class TrainingEngine:
         return module
 
     def _cleanup(self):
-        if self._temp_path and os.path.exists(self._temp_path):
-            try:
-                os.remove(self._temp_path)
-            except OSError:
-                pass
         self._temp_path = None
 
     def _create_synthetic_dataset(self, config):
