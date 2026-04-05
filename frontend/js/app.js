@@ -5,6 +5,8 @@ class App {
         this.connectionManager = new ConnectionManager(this.canvas, this.nodeManager);
         this.propertiesPanel = new PropertiesPanel();
         this.codeGenerator = new CodeGenerator();
+        this.datasetManager = new DatasetManagerUI();
+        this.datasetManager.init();
         
         window.app = this;
         
@@ -36,6 +38,7 @@ class App {
                 this.closeCodeModal();
                 this.closeTrainModal();
                 this.closeEvalModal();
+                this.closeDatasetModal();
             });
         });
         
@@ -51,6 +54,7 @@ class App {
                 this.closeCodeModal();
                 this.closeTrainModal();
                 this.closeEvalModal();
+                this.closeDatasetModal();
             }
             if ((e.key === 'Delete' || e.key === 'Backspace') && !this.isInputFocused()) {
                 if (this.nodeManager.selectedNode) {
@@ -105,7 +109,7 @@ class App {
             model_name: document.getElementById('modelName').value || 'NeuralNetwork',
             use_jit: document.getElementById('useJit').checked,
             use_compile: document.getElementById('useCompile').checked,
-            device: 'cpu'
+            device: document.getElementById('deviceSelect').value || 'cpu'
         };
     }
     
@@ -234,6 +238,9 @@ class App {
                 if (blueprint.use_compile !== undefined) {
                     document.getElementById('useCompile').checked = blueprint.use_compile;
                 }
+                if (blueprint.device !== undefined) {
+                    document.getElementById('deviceSelect').value = blueprint.device;
+                }
                 
                 this.renderConnections();
                 this.showToast('Blueprint loaded!', 'success');
@@ -279,7 +286,35 @@ class App {
             return;
         }
         this.resetTrainModal();
+        this.populateDatasetSelector();
         document.getElementById('trainModal').classList.add('active');
+    }
+
+    async populateDatasetSelector() {
+        const select = document.getElementById('trainDataset');
+        select.value = '';
+        try {
+            const res = await fetch('http://localhost:8000/datasets');
+            const data = await res.json();
+            const datasets = data.datasets || [];
+            select.innerHTML = '<option value="">Synthetic (random data)</option>';
+            datasets.forEach(ds => {
+                const opt = document.createElement('option');
+                opt.value = ds.id;
+                opt.textContent = `${ds.name} (${ds.num_samples} samples, ${ds.num_classes || '?'} classes)`;
+                select.appendChild(opt);
+            });
+        } catch (e) {}
+        this.updateSyntheticFields();
+        select.addEventListener('change', () => this.updateSyntheticFields());
+    }
+
+    updateSyntheticFields() {
+        const datasetId = document.getElementById('trainDataset').value;
+        const show = !datasetId;
+        document.querySelectorAll('#syntheticFields, #syntheticFields2, #syntheticFields3, #syntheticFields4').forEach(el => {
+            el.style.display = show ? '' : 'none';
+        });
     }
     
     closeTrainModal() {
@@ -298,7 +333,9 @@ class App {
     
     async startTraining() {
         const blueprint = this.getBlueprint();
-        const config = {
+        const datasetId = document.getElementById('trainDataset').value;
+        
+        const baseConfig = {
             blueprint,
             epochs: parseInt(document.getElementById('trainEpochs').value) || 10,
             learning_rate: parseFloat(document.getElementById('trainLR').value) || 0.001,
@@ -309,15 +346,28 @@ class App {
             weight_decay: parseFloat(document.getElementById('trainWeightDecay').value) || 0.0,
             step_size: 30,
             gamma: 0.1,
-            input_size: [
-                parseInt(document.getElementById('trainInputC').value) || 3,
-                parseInt(document.getElementById('trainInputH').value) || 32,
-                parseInt(document.getElementById('trainInputW').value) || 32
-            ],
-            num_classes: parseInt(document.getElementById('trainNumClasses').value) || 10,
-            num_samples: parseInt(document.getElementById('trainSamples').value) || 1000,
             val_ratio: 0.2
         };
+
+        let config;
+        let url;
+
+        if (datasetId) {
+            config = { ...baseConfig, dataset_id: datasetId };
+            url = 'http://localhost:8000/train/dataset';
+        } else {
+            config = {
+                ...baseConfig,
+                input_size: [
+                    parseInt(document.getElementById('trainInputC').value) || 3,
+                    parseInt(document.getElementById('trainInputH').value) || 32,
+                    parseInt(document.getElementById('trainInputW').value) || 32
+                ],
+                num_classes: parseInt(document.getElementById('trainNumClasses').value) || 10,
+                num_samples: parseInt(document.getElementById('trainSamples').value) || 1000,
+            };
+            url = 'http://localhost:8000/train';
+        }
         
         document.getElementById('trainConfig').style.display = 'none';
         document.getElementById('trainProgress').style.display = '';
@@ -330,7 +380,7 @@ class App {
         this._trainLog = [];
         
         try {
-            const response = await fetch('http://localhost:8000/train', {
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(config)
@@ -368,6 +418,13 @@ class App {
     }
     
     handleTrainEvent(event) {
+        if (event.type === 'device_info') {
+            this.addTrainLog(`Device: ${event.device}`);
+            if (event.requested === 'cuda' && event.actual === 'cpu') {
+                this.showToast('CUDA unavailable, training on CPU. Install PyTorch with CUDA support to use GPU.', 'warning');
+            }
+        }
+        
         if (event.type === 'progress') {
             document.getElementById('trainEpochLabel').textContent = `Epoch ${event.epoch}/${event.total_epochs}`;
             document.getElementById('trainTimeLabel').textContent = this.formatTime(event.elapsed);
@@ -438,6 +495,10 @@ class App {
     
     closeEvalModal() {
         document.getElementById('evalModal').classList.remove('active');
+    }
+
+    closeDatasetModal() {
+        document.getElementById('datasetModal').classList.remove('active');
     }
     
     async startEvaluation() {
