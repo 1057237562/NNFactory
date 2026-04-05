@@ -312,6 +312,7 @@ class CodeGenerator:
         model_name = self.blueprint.model_name
         use_jit = self.blueprint.use_jit
         use_compile = self.blueprint.use_compile
+        device = self.blueprint.device
         
         layers_by_id = {layer.id: layer for layer in self.blueprint.layers}
         
@@ -464,12 +465,13 @@ class CodeGenerator:
         
         code.append("")
         code.append(f"if __name__ == '__main__':")
-        code.append(f"    model = {model_name}()")
+        code.append(f"    device = torch.device('{device}' if torch.cuda.is_available() else 'cpu')")
+        code.append(f"    model = {model_name}().to(device)")
         code.append(f"    print(model)")
         code.append(f"    print(f'Total parameters: {{sum(p.numel() for p in model.parameters()):,}}')")
         code.append(f"")
         code.append(f"    # Test forward pass")
-        code.append(f"    x = torch.randn(1, 3, 224, 224)")
+        code.append(f"    x = torch.randn(1, 3, 224, 224).to(device)")
         code.append(f"    output = model(x)")
         code.append(f"    print(f'Input shape: {{x.shape}}')")
         code.append(f"    print(f'Output shape: {{output.shape}}')")

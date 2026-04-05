@@ -40,6 +40,10 @@
                     <span class="slider"></span>
                     <span class="label-text">Compile</span>
                 </label>
+                <select class="device-select" id="deviceSelect">
+                    <option value="cpu">CPU</option>
+                    <option value="cuda">GPU (CUDA)</option>
+                </select>
                 <button id="validateBtn" class="btn btn-secondary" title="Validate Blueprint">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                         <path d="M8 0a8 8 0 100 16A8 8 0 008 0zm3.78 5.22a.75.75 0 010 1.06l-4 4a.75.75 0 01-1.06 0l-2-2a.75.75 0 111.06-1.06L7 8.44l3.22-3.22a.75.75 0 011.06 0z"/>
@@ -63,6 +67,15 @@
                         <path d="M11.251.068a.5.5 0 01.227.58L9.677 6.5H13a.5.5 0 01.364.843l-8 8.5a.5.5 0 01-.842-.49L6.323 9.5H3a.5.5 0 01-.364-.843l8-8.5a.5.5 0 01.615-.09z"/>
                     </svg>
                     Evaluate
+                </button>
+                <button id="datasetBtn" class="btn btn-secondary" title="Manage Datasets">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <ellipse cx="8" cy="3" rx="6" ry="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M2 3v4c0 1.1 2.7 2 6 2s6-.9 6-2V3" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M2 7v4c0 1.1 2.7 2 6 2s6-.9 6-2V7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M2 11v2c0 1.1 2.7 2 6 2s6-.9 6-2v-2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    Datasets
                 </button>
                 <button id="exportBtn" class="btn btn-secondary" title="Export Blueprint">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
@@ -642,6 +655,12 @@
                     <div class="train-config" id="trainConfig">
                         <div class="train-config-grid">
                             <div class="property-row">
+                                <label class="property-label">Dataset</label>
+                                <select class="property-select" id="trainDataset">
+                                    <option value="">Synthetic (random data)</option>
+                                </select>
+                            </div>
+                            <div class="property-row">
                                 <label class="property-label">Epochs</label>
                                 <input type="number" class="property-input" id="trainEpochs" value="10" min="1" max="500">
                             </div>
@@ -691,19 +710,19 @@
                                 <label class="property-label">Num Classes</label>
                                 <input type="number" class="property-input" id="trainNumClasses" value="10" min="1">
                             </div>
-                            <div class="property-row">
+                            <div class="property-row" id="syntheticFields">
                                 <label class="property-label">Input Channels</label>
                                 <input type="number" class="property-input" id="trainInputC" value="3" min="1">
                             </div>
-                            <div class="property-row">
+                            <div class="property-row" id="syntheticFields2">
                                 <label class="property-label">Input Height</label>
                                 <input type="number" class="property-input" id="trainInputH" value="32" min="1">
                             </div>
-                            <div class="property-row">
+                            <div class="property-row" id="syntheticFields3">
                                 <label class="property-label">Input Width</label>
                                 <input type="number" class="property-input" id="trainInputW" value="32" min="1">
                             </div>
-                            <div class="property-row">
+                            <div class="property-row" id="syntheticFields4">
                                 <label class="property-label">Train Samples</label>
                                 <input type="number" class="property-input" id="trainSamples" value="1000" min="100">
                             </div>
@@ -869,6 +888,204 @@
             </div>
         </div>
 
+        <div class="code-modal" id="datasetModal">
+            <div class="modal-overlay"></div>
+            <div class="modal-content modal-xl">
+                <div class="modal-header">
+                    <h3>Dataset Manager</h3>
+                    <div class="modal-actions">
+                        <button class="btn btn-danger btn-sm" id="purgeDatasetsBtn" title="Purge all datasets">
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                                <path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6zM14.5 3a1 1 0 00-1-1H13V1a.5.5 0 00-1 0v1H8V1a.5.5 0 00-1 0v1H5.5l-.707-.707A.5.5 0 004 1.5v.5H2.5a.5.5 0 000 1H3v10a1 1 0 001 1h8a1 1 0 001-1V3h.5a.5.5 0 00.5-.5zM5 2h6v1H5V2zM4 3h8v10H4V3z"/>
+                            </svg>
+                            Purge All
+                        </button>
+                        <button class="modal-close" id="closeDatasetModal">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M3.64 3.64a.5.5 0 01.71 0L8 7.29l3.65-3.65a.5.5 0 01.71.71L8.71 8l3.65 3.65a.5.5 0 01-.71.71L8 8.71l-3.65 3.65a.5.5 0 01-.71-.71L7.29 8 3.64 4.35a.5.5 0 010-.71z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <div class="ds-full-manager">
+                        <div class="ds-main-layout">
+                            <aside class="ds-sidebar">
+                                <div class="ds-sidebar-section">
+                                    <h4 class="ds-sidebar-title">Load Dataset</h4>
+                                    <div class="ds-upload-tabs">
+                                        <button class="ds-upload-tab active" data-tab="folder">Folder</button>
+                                        <button class="ds-upload-tab" data-tab="file">Upload</button>
+                                    </div>
+                                    <div class="ds-upload-content active" id="dsTabFolder">
+                                        <div class="property-row">
+                                            <label class="property-label">Name</label>
+                                            <input type="text" class="property-input" id="dsFolderName" placeholder="my_dataset">
+                                        </div>
+                                        <div class="property-row">
+                                            <label class="property-label">Server Path</label>
+                                            <div class="ds-path-input">
+                                                <input type="text" class="property-input" id="dsFolderPath" placeholder="/path/to/data">
+                                                <button class="btn btn-secondary btn-sm" id="dsBrowseBtn">Browse</button>
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-primary btn-full" id="dsLoadFolderBtn">
+                                            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M2 2.5A1.5 1.5 0 013.5 1h2.146a1.5 1.5 0 011.06.44l1 1A1.5 1.5 0 018.768 3H11.5A1.5 1.5 0 0113 4.5v7a1.5 1.5 0 01-1.5 1.5h-8A1.5 1.5 0 012 11.5v-9z"/></svg>
+                                            Load
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="ds-sidebar-section">
+                                    <h4 class="ds-sidebar-title">Datasets <span class="ds-count" id="dsCount">0</span></h4>
+                                    <div class="ds-list" id="dsList">
+                                        <div class="ds-empty">
+                                            <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><ellipse cx="14" cy="7" rx="9" ry="3.5" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"/><path d="M5 7v5c0 2 4 3.5 9 3.5s9-1.5 9-3.5V7" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"/></svg>
+                                            <p>No datasets</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </aside>
+
+                            <div class="ds-content">
+                                <div class="ds-welcome" id="dsWelcome">
+                                    <svg width="64" height="64" viewBox="0 0 64 64" fill="none"><ellipse cx="32" cy="16" rx="20" ry="8" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.2"/><path d="M12 16v12c0 4.4 9 8 20 8s20-3.6 20-8V16" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.2"/><path d="M12 28v12c0 4.4 9 8 20 8s20-3.6 20-8V28" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.2"/><path d="M12 40v8c0 4.4 9 8 20 8s20-3.6 20-8v-8" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.2"/></svg>
+                                    <h3>Select a dataset or load a new one</h3>
+                                </div>
+
+                                <div class="ds-upload-panel" id="dsUploadPanel" style="display:none;">
+                                    <h3>Upload Dataset</h3>
+                                    <div class="ds-upload-dropzone" id="dsUploadDropZone">
+                                        <svg width="48" height="48" viewBox="0 0 32 32" fill="none"><path d="M16 22V10M16 10l-5 5M16 10l5 5" stroke="currentColor" stroke-width="1.5" opacity="0.5"/><path d="M5 22v4a2 2 0 002 2h18a2 2 0 002-2v-4" stroke="currentColor" stroke-width="1.5" opacity="0.5"/></svg>
+                                        <p>Drop CSV or ZIP here</p>
+                                        <p class="ds-upload-sub">or click to browse</p>
+                                        <input type="file" id="dsUploadFileInput" accept=".csv,.zip" style="display:none;">
+                                    </div>
+                                    <div class="property-row" style="margin-top:12px;">
+                                        <label class="property-label">Name</label>
+                                        <input type="text" class="property-input" id="dsUploadFileName" placeholder="auto">
+                                    </div>
+                                </div>
+
+                                <div class="ds-view" id="dsView" style="display:none;">
+                                    <div class="ds-view-header">
+                                        <div>
+                                            <h3 id="dsViewName"></h3>
+                                            <div class="ds-badges" id="dsViewBadges"></div>
+                                        </div>
+                                        <div class="ds-view-actions">
+                                            <button class="btn btn-danger btn-sm" id="dsDeleteBtn">
+                                                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M4.5 4.5A.5.5 0 015 5v5a.5.5 0 01-1 0V5a.5.5 0 01.5-.5zm2 0a.5.5 0 01.5.5v5a.5.5 0 01-1 0V5a.5.5 0 01.5-.5zm2.5.5a.5.5 0 00-1 0v5a.5.5 0 001 0V5z"/></svg>
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="ds-info-panel" id="dsInfoPanel"></div>
+
+                                    <div class="ds-tabs">
+                                        <button class="ds-tab active" data-view="overview">Overview</button>
+                                        <button class="ds-tab" data-view="preview">Preview</button>
+                                        <button class="ds-tab" data-view="visualize">Visualize</button>
+                                        <button class="ds-tab" data-view="preprocess">Preprocessing</button>
+                                    </div>
+
+                                    <div class="ds-panels">
+                                        <div class="ds-panel active" id="dsPanelOverview"><div id="dsOverviewContent"></div></div>
+                                        <div class="ds-panel" id="dsPanelPreview"><div id="dsPreviewContent"></div></div>
+                                        <div class="ds-panel" id="dsPanelVisualize"><div id="dsVizContent"></div></div>
+                                        <div class="ds-panel" id="dsPanelPreprocess">
+                                            <div class="pp-blueprint">
+                                                <div class="pp-bp-header">
+                                                    <h5>Preprocessing Pipeline</h5>
+                                                    <div class="pp-bp-actions">
+                                                        <button class="btn btn-secondary btn-sm" id="ppClearBtn">
+                                                            <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 3h8M4.5 3V1h3v2M4 5v4M8 5v4M3 3l.7 7h4.6l.7-7" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+                                                            Clear
+                                                        </button>
+                                                        <button class="btn btn-primary btn-sm" id="ppExecBtn">
+                                                            <svg width="12" height="12" viewBox="0 0 12 12"><path d="M10 1L4 6l6 5V1z"/></svg>
+                                                            Execute
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div class="pp-canvas" id="ppCanvas">
+                                                    <div class="pp-grid"></div>
+                                                    <div class="pp-nodes" id="ppNodes"></div>
+                                                    <svg class="pp-conns" id="ppConns"></svg>
+                                                </div>
+                                                <div class="pp-palette">
+                                                    <div class="pp-palette-categories">
+                                                        <div class="pp-palette-category">
+                                                            <h6 class="pp-cat-title">Data Operations</h6>
+                                                            <div class="pp-palette-items">
+                                                                <div class="pp-palette-item" data-type="filter_class"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 3h10l-4 5v3l-2 1V8L2 3z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Filter Class</div>
+                                                                <div class="pp-palette-item" data-type="remove_samples"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="4" cy="4" r="2.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="10" r="2.5" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="6" y1="6" x2="8" y2="8" stroke="currentColor" stroke-width="1.5"/></svg>Remove Samples</div>
+                                                                <div class="pp-palette-item" data-type="split"><svg width="14" height="14" viewBox="0 0 14 14"><rect x="1" y="1" width="5" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="8" y="1" width="5" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="1" y="8" width="5" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="8" y="8" width="5" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Split Dataset</div>
+                                                                <div class="pp-palette-item" data-type="balance"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 1v12M3 4h8M3 10h8" stroke="currentColor" stroke-width="1.5"/></svg>Balance Classes</div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="pp-palette-category">
+                                                            <h6 class="pp-cat-title">Encoding</h6>
+                                                            <div class="pp-palette-items">
+                                                                <div class="pp-palette-item" data-type="one_hot"><svg width="14" height="14" viewBox="0 0 14 14"><rect x="1" y="1" width="3" height="3" rx="0.5" fill="currentColor"/><rect x="5.5" y="1" width="3" height="3" rx="0.5" fill="none" stroke="currentColor" stroke-width="1"/><rect x="1" y="5.5" width="3" height="3" rx="0.5" fill="none" stroke="currentColor" stroke-width="1"/><rect x="5.5" y="5.5" width="3" height="3" rx="0.5" fill="currentColor"/></svg>One-Hot Encode</div>
+                                                                <div class="pp-palette-item" data-type="label_encode"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="3.5" cy="3.5" r="2" fill="currentColor"/><circle cx="10.5" cy="10.5" r="2" fill="currentColor"/><line x1="5.5" y1="5.5" x2="8.5" y2="8.5" stroke="currentColor" stroke-width="1.5"/></svg>Label Encode</div>
+                                                                <div class="pp-palette-item" data-type="ordinal_encode"><svg width="14" height="14" viewBox="0 0 14 14"><rect x="1" y="1" width="12" height="2.5" rx="0.5" fill="currentColor"/><rect x="1" y="5.5" width="9" height="2.5" rx="0.5" fill="currentColor" opacity="0.7"/><rect x="1" y="10" width="6" height="2.5" rx="0.5" fill="currentColor" opacity="0.4"/></svg>Ordinal Encode</div>
+                                                                <div class="pp-palette-item" data-type="target_encode"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="7" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="7" r="1" fill="currentColor"/></svg>Target Encode</div>
+                                                                <div class="pp-palette-item" data-type="frequency_encode"><svg width="14" height="14" viewBox="0 0 14 14"><rect x="1" y="7" width="3" height="6" rx="0.5" fill="currentColor" opacity="0.4"/><rect x="5.5" y="4" width="3" height="9" rx="0.5" fill="currentColor" opacity="0.6"/><rect x="10" y="1" width="3" height="12" rx="0.5" fill="currentColor"/></svg>Frequency Encode</div>
+                                                                <div class="pp-palette-item" data-type="binary_encode"><svg width="14" height="14" viewBox="0 0 14 14"><text x="1" y="5.5" font-size="5.5" fill="currentColor" font-family="monospace">0</text><text x="7" y="5.5" font-size="5.5" fill="currentColor" font-family="monospace">1</text><text x="1" y="12" font-size="5.5" fill="currentColor" font-family="monospace">1</text><text x="7" y="12" font-size="5.5" fill="currentColor" font-family="monospace">0</text></svg>Binary Encode</div>
+                                                                <div class="pp-palette-item" data-type="hash_encode"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M4 1v12M10 1v12M1 5h12M1 9h12" stroke="currentColor" stroke-width="1.5"/></svg>Hash Encode</div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="pp-palette-category">
+                                                            <h6 class="pp-cat-title">Normalization &amp; Image</h6>
+                                                            <div class="pp-palette-items">
+                                                                <div class="pp-palette-item" data-type="normalize"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M1 13 L5 3 L9 9 L13 1" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Normalize</div>
+                                                                <div class="pp-palette-item" data-type="resize"><svg width="14" height="14" viewBox="0 0 14 14"><rect x="1" y="1" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M11 1v3h3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Resize Images</div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="pp-palette-category">
+                                                            <h6 class="pp-cat-title">Destructive</h6>
+                                                            <div class="pp-palette-items">
+                                                                <div class="pp-palette-item" data-type="purge_all"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 4h10M4.5 4V2h5v2M5 6v5M9 6v5M3 4l1 8h6l1-8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Purge All Data</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="ppNodeModal" style="display:none;">
+            <div class="modal-content modal-sm">
+                <div class="modal-header">
+                    <h3 id="ppNodeTitle">Configure Node</h3>
+                    <button class="modal-close" id="closePpNodeModal">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3.64 3.64a.5.5 0 01.71 0L8 7.29l3.65-3.65a.5.5 0 01.71.71L8.71 8l3.65 3.65a.5.5 0 01-.71.71L8 8.71l-3.65 3.65a.5.5 0 01-.71-.71L7.29 8 3.64 4.35a.5.5 0 010-.71z"/></svg>
+                    </button>
+                </div>
+                <div class="modal-body" id="ppNodeConfig"></div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="ppResultModal" style="display:none;">
+            <div class="modal-content modal-sm">
+                <div class="modal-header">
+                    <h3>Preprocessing Results</h3>
+                    <button class="modal-close" id="closePpResultModal">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3.64 3.64a.5.5 0 01.71 0L8 7.29l3.65-3.65a.5.5 0 01.71.71L8.71 8l3.65 3.65a.5.5 0 01-.71.71L8 8.71l-3.65 3.65a.5.5 0 01-.71-.71L7.29 8 3.64 4.35a.5.5 0 010-.71z"/></svg>
+                    </button>
+                </div>
+                <div class="modal-body" id="ppResultContent"></div>
+            </div>
+        </div>
+
         <div class="toast-container" id="toastContainer"></div>
     </div>
 
@@ -879,6 +1096,7 @@
     <script src="js/connections.js"></script>
     <script src="js/properties.js"></script>
     <script src="js/codegen.js"></script>
+    <script src="js/dataset-manager.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

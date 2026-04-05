@@ -31,6 +31,8 @@ echo Press any key to stop all servers...
 pause >nul
 
 echo Stopping servers...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8000" ^| findstr "LISTENING"') do taskkill /PID %%a /T /F >nul 2>&1
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":3000" ^| findstr "LISTENING"') do taskkill /PID %%a /T /F >nul 2>&1
 taskkill /FI "WindowTitle eq NNFactory Backend" /T /F >nul 2>&1
 taskkill /FI "WindowTitle eq NNFactory Frontend" /T /F >nul 2>&1
 
