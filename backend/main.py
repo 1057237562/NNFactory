@@ -235,6 +235,14 @@ async def column_stats(dataset_id: str, column: Optional[str] = Query(None)):
 async def get_dataloader_config(dataset_id: str):
     return dataset_manager.get_dataloader_config(dataset_id)
 
+@app.get("/datasets/{dataset_id}/target-columns")
+async def get_target_columns(dataset_id: str):
+    return dataset_manager.get_available_target_columns(dataset_id)
+
+@app.put("/datasets/{dataset_id}/label-column")
+async def set_label_column(dataset_id: str, label_column: str = Query(...)):
+    return dataset_manager.set_label_column(dataset_id, label_column)
+
 @app.post("/train/dataset")
 async def train_with_dataset(config: TrainWithDatasetConfig):
     generator = CodeGenerator(config.blueprint)
