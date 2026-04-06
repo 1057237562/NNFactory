@@ -6,7 +6,7 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from fastapi import FastAPI, UploadFile, File, Form, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
 from typing import Any, Optional
 from code_generator import CodeGenerator
@@ -269,3 +269,57 @@ async def train_with_dataset(config: TrainWithDatasetConfig):
             yield f"data: {json.dumps(event)}\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+@app.get("/weights/{filename}")
+async def download_weights(filename: str):
+    weights_dir = TrainingEngine.TEMP_DIR
+    file_path = os.path.join(weights_dir, filename)
+    if not os.path.exists(file_path):
+        return {"valid": False, "errors": ["Weights file not found"]}
+    return FileResponse(file_path, media_type="application/octet-stream", filename=filename)
+
+@app.get("/weights")
+async def list_weights():
+    weights_dir = TrainingEngine.TEMP_DIR
+    if not os.path.exists(weights_dir):
+        return {"weights": []}
+    weights = []
+    for f in sorted(os.listdir(weights_dir)):
+        if f.endswith(".pth"):
+            path = os.path.join(weights_dir, f)
+            stat = os.stat(path)
+            weights.append({
+                "filename": f,
+                "size": stat.st_size,
+                "modified": stat.st_mtime,
+                "size_human": _format_size(stat.st_size)
+            })
+    return {"weights": weights}
+
+def _format_size(size_bytes):
+    for unit in ['B', 'KB', 'MB', 'GB']:
+        if size_bytes < 1024:
+            return f"{size_bytes:.1f} {unit}"
+        size_bytes /= 1024
+    return f"{size_bytes:.1f} TB"
+
+@app.delete("/weights/{filename}")
+async def delete_weights(filename: str):
+    weights_dir = TrainingEngine.TEMP_DIR
+    file_path = os.path.join(weights_dir, filename)
+    if not os.path.exists(file_path):
+        return {"status": "not_found", "message": "Weights file not found"}
+    os.remove(file_path)
+    return {"status": "deleted", "filename": filename}
+
+@app.post("/weights/purge")
+async def purge_weights():
+    weights_dir = TrainingEngine.TEMP_DIR
+    if not os.path.exists(weights_dir):
+        return {"status": "purged", "count": 0}
+    count = 0
+    for f in os.listdir(weights_dir):
+        if f.endswith(".pth"):
+            os.remove(os.path.join(weights_dir, f))
+            count += 1
+    return {"status": "purged", "count": count}

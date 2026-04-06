@@ -77,6 +77,12 @@
                     </svg>
                     Datasets
                 </button>
+                <button id="weightsBtn" class="btn btn-secondary" title="Download Weights">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M7 1v7M4 5l3 3 3-3M2 10v2a1 1 0 001 1h8a1 1 0 001-1v-2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    Weights
+                </button>
                 <button id="exportBtn" class="btn btn-secondary" title="Export Blueprint">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                         <path d="M8 1a.5.5 0 01.5.5v7.793l2.146-2.147a.5.5 0 01.708.708l-3 3a.5.5 0 01-.708 0l-3-3a.5.5 0 11.708-.708L7.5 9.293V1.5A.5.5 0 018 1zM2 13.5a.5.5 0 01.5-.5h11a.5.5 0 010 1h-11a.5.5 0 01-.5-.5z"/>
@@ -793,9 +799,17 @@
                                 <span class="result-value" id="resultTime">-</span>
                             </div>
                         </div>
-                        <button class="btn btn-secondary" id="trainAgainBtn" style="margin-top:16px;">
-                            Train Again
-                        </button>
+                        <div class="results-buttons">
+                            <button class="btn btn-primary" id="exportWeightsBtn" style="flex:1;">
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                                    <path d="M7 1v7M4 5l3 3 3-3M2 10v2a1 1 0 001 1h8a1 1 0 001-1v-2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                </svg>
+                                Export Weights
+                            </button>
+                            <button class="btn btn-secondary" id="trainAgainBtn" style="flex:1;">
+                                Train Again
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1083,6 +1097,39 @@
                     </button>
                 </div>
                 <div class="modal-body" id="ppResultContent"></div>
+            </div>
+        </div>
+
+        <div class="code-modal" id="weightsModal">
+            <div class="modal-overlay"></div>
+            <div class="modal-content modal-lg">
+                <div class="modal-header">
+                    <h3>Model Weights</h3>
+                    <div class="modal-actions">
+                        <button class="btn btn-danger btn-sm" id="purgeWeightsBtn" title="Delete all weights">
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                                <path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6zM14.5 3a1 1 0 00-1-1H13V1a.5.5 0 00-1 0v1H8V1a.5.5 0 00-1 0v1H5.5l-.707-.707A.5.5 0 004 1.5v.5H2.5a.5.5 0 000 1H3v10a1 1 0 001 1h8a1 1 0 001-1V3h.5a.5.5 0 00.5-.5zM5 2h6v1H5V2zM4 3h8v10H4V3z"/>
+                            </svg>
+                            Purge All
+                        </button>
+                        <button class="modal-close" id="closeWeightsModal">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M3.64 3.64a.5.5 0 01.71 0L8 7.29l3.65-3.65a.5.5 0 01.71.71L8.71 8l3.65 3.65a.5.5 0 01-.71.71L8 8.71l-3.65 3.65a.5.5 0 01-.71-.71L7.29 8 3.64 4.35a.5.5 0 010-.71z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <div class="weights-list" id="weightsList">
+                        <div class="weights-empty" id="weightsEmpty">
+                            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                                <path d="M24 8v20M16 22l8 8 8-8M10 32v4a2 2 0 002 2h24a2 2 0 002-2v-4" fill="none" stroke="currentColor" stroke-width="2" opacity="0.3"/>
+                            </svg>
+                            <p>No trained weights found</p>
+                            <span class="weights-empty-hint">Train a model to generate weights</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
