@@ -642,6 +642,7 @@ class DatasetManager:
                             "q25": float(np.percentile(values, 25)),
                             "q75": float(np.percentile(values, 75)),
                         }
+                    result["relations"] = self._compute_column_relations(rows, actual_col, numeric_cols, categorical_cols, label_col, resolve_col, get_val, safe_float_values)
                 elif actual_col in categorical_cols or actual_col == label_col:
                     value_counts = {}
                     for r in rows:
@@ -655,6 +656,7 @@ class DatasetManager:
                         "categories": list(sorted_counts.keys()),
                         "counts": list(sorted_counts.values()),
                     }
+                    result["relations"] = self._compute_column_relations(rows, actual_col, numeric_cols, categorical_cols, label_col, resolve_col, get_val, safe_float_values)
 
             self._col_cache[cache_key] = (result, now)
             return {"valid": True, "column_stats": result}
@@ -663,6 +665,84 @@ class DatasetManager:
             return {"valid": False, "errors": [f"KeyError: {e}\n{traceback.format_exc()}"]}
         except Exception as e:
             return {"valid": False, "errors": [f"Error: {e}\n{traceback.format_exc()}"]}
+
+    def _compute_column_relations(self, rows, source_col, numeric_cols, categorical_cols, label_col, resolve_col, get_val, safe_float_values):
+        relations = {"numeric": {}, "categorical": {}}
+        max_categories = 50
+
+        for num_col in numeric_cols:
+            if num_col == source_col:
+                continue
+            grouped = {}
+            for r in rows:
+                cat_val = get_val(r, source_col)
+                if cat_val == "":
+                    continue
+                num_raw = get_val(r, num_col)
+                if num_raw == "":
+                    continue
+                try:
+                    num_val = float(num_raw)
+                except (ValueError, TypeError):
+                    continue
+                if cat_val not in grouped:
+                    grouped[cat_val] = []
+                grouped[cat_val].append(num_val)
+
+            summary = {}
+            for cat_val, vals in sorted(grouped.items(), key=lambda x: len(x[1]), reverse=True)[:max_categories]:
+                arr = np.array(vals, dtype=np.float64)
+                if len(arr) > 0:
+                    summary[cat_val] = {
+                        "count": len(arr),
+                        "mean": round(float(np.mean(arr)), 4),
+                        "std": round(float(np.std(arr)), 4),
+                        "min": round(float(np.min(arr)), 4),
+                        "max": round(float(np.max(arr)), 4),
+                    }
+            if summary:
+                relations["numeric"][num_col] = summary
+
+        for cat_col in categorical_cols:
+            if cat_col == source_col:
+                continue
+            contingency = {}
+            for r in rows:
+                src_val = get_val(r, source_col)
+                other_val = get_val(r, cat_col)
+                if src_val == "" or other_val == "":
+                    continue
+                if src_val not in contingency:
+                    contingency[src_val] = {}
+                contingency[src_val][other_val] = contingency[src_val].get(other_val, 0) + 1
+
+            top_src = sorted(contingency.keys(), key=lambda k: sum(contingency[k].values()), reverse=True)[:max_categories]
+            trimmed = {}
+            for src_val in top_src:
+                top_other = sorted(contingency[src_val].keys(), key=lambda k: contingency[src_val][k], reverse=True)[:max_categories]
+                trimmed[src_val] = {k: contingency[src_val][k] for k in top_other}
+            if trimmed:
+                relations["categorical"][cat_col] = trimmed
+
+        if label_col and label_col != source_col and label_col in categorical_cols:
+            contingency = {}
+            for r in rows:
+                src_val = get_val(r, source_col)
+                lbl_val = get_val(r, label_col)
+                if src_val == "" or lbl_val == "":
+                    continue
+                if src_val not in contingency:
+                    contingency[src_val] = {}
+                contingency[src_val][lbl_val] = contingency[src_val].get(lbl_val, 0) + 1
+
+            top_src = sorted(contingency.keys(), key=lambda k: sum(contingency[k].values()), reverse=True)[:max_categories]
+            trimmed = {}
+            for src_val in top_src:
+                trimmed[src_val] = contingency[src_val]
+            if trimmed:
+                relations["categorical"]["__label__"] = trimmed
+
+        return relations
 
     def get_dataloader_config(self, dataset_id: str) -> dict:
         info = self._datasets.get(dataset_id)

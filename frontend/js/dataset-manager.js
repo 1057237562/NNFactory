@@ -482,12 +482,14 @@ class DatasetManagerUI {
                 document.getElementById('vizBarChartContainer').style.display = 'none';
                 this.drawHistogram(cs.histogram, col);
                 this.renderNumericSummary(cs.statistics);
+                this.renderColumnRelations(cs.relations || {}, col);
             } else if ((type === 'categorical' || type === 'label') && cs.histogram && cs.histogram.type === 'categorical') {
                 document.getElementById('vizCorrHeatmap').parentElement.style.display = 'none';
                 document.getElementById('vizHistogramContainer').style.display = 'none';
                 document.getElementById('vizBarChartContainer').style.display = '';
                 this.drawCategoricalBarChart(cs.histogram, col);
                 this.renderCategoricalSummary(cs.value_counts);
+                this.renderColumnRelations(cs.relations || {}, col);
             }
         } catch (e) { console.error('Failed to load column data:', e); }
     }
@@ -649,6 +651,76 @@ class DatasetManagerUI {
             h += `<div class="viz-stat-card"><span class="viz-stat-card-lbl">Top</span><span class="viz-stat-card-val">${entries[0][0]}</span></div>`;
             h += `<div class="viz-stat-card"><span class="viz-stat-card-lbl">Top %</span><span class="viz-stat-card-val">${((entries[0][1] / total) * 100).toFixed(1)}%</span></div>`;
         }
+        h += '</div>';
+        el.innerHTML = h;
+    }
+
+    renderColumnRelations(relations, sourceCol) {
+        const el = document.getElementById('vizStatSummary');
+        if (!el || (!relations.numeric && !relations.categorical) || 
+            (Object.keys(relations.numeric).length === 0 && Object.keys(relations.categorical).length === 0)) {
+            return;
+        }
+        let h = el.innerHTML || '';
+        h += '<div class="viz-relations-section">';
+        h += '<h6 class="viz-relations-title">Relations with Other Columns</h6>';
+
+        const palette = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#ec4899','#06b6d4','#84cc16','#f97316','#6366f1'];
+
+        for (const [numCol, groupedStats] of Object.entries(relations.numeric || {})) {
+            const entries = Object.entries(groupedStats);
+            const maxCount = Math.max(...entries.map(([, s]) => s.count), 1);
+            h += `<div class="viz-relation-group"><h6 class="viz-relation-col">${numCol}</h6>`;
+            h += '<div class="viz-relation-bars">';
+            entries.forEach(([catVal, stats], idx) => {
+                const pct = (stats.count / maxCount) * 100;
+                const color = palette[idx % palette.length];
+                h += `<div class="viz-dist-bar">`;
+                h += `<span class="viz-dist-bar-label" title="${catVal}">${catVal.length > 14 ? catVal.substring(0, 13) + '…' : catVal}</span>`;
+                h += `<div class="viz-dist-bar-track"><div class="viz-dist-bar-fill" style="width:${pct}%;background:${color}"></div></div>`;
+                h += `<span class="viz-dist-bar-meta"><b>${stats.count}</b>  μ=${stats.mean.toFixed(2)}</span>`;
+                h += `</div>`;
+            });
+            h += '</div></div>';
+        }
+
+        for (const [catCol, contingency] of Object.entries(relations.categorical || {})) {
+            const displayLabel = catCol === '__label__' ? 'Label' : catCol;
+            const allOtherVals = [...new Set(Object.values(contingency).flatMap(Object.keys))].sort();
+            const rowTotals = Object.fromEntries(Object.entries(contingency).map(([k, v]) => [k, Object.values(v).reduce((a, b) => a + b, 0)]));
+            const maxTotal = Math.max(...Object.values(rowTotals), 1);
+
+            h += `<div class="viz-relation-group"><h6 class="viz-relation-col">${displayLabel}</h6>`;
+            h += '<div class="viz-relation-bars">';
+            Object.entries(contingency).forEach(([srcVal, counts], idx) => {
+                const total = rowTotals[srcVal];
+                const pct = (total / maxTotal) * 100;
+                h += `<div class="viz-dist-bar">`;
+                h += `<span class="viz-dist-bar-label" title="${srcVal}">${srcVal.length > 14 ? srcVal.substring(0, 13) + '…' : srcVal}</span>`;
+                h += `<div class="viz-dist-bar-track viz-dist-bar-stacked">`;
+                let offsetPct = 0;
+                allOtherVals.forEach((v, vi) => {
+                    const cnt = counts[v] || 0;
+                    if (cnt > 0) {
+                        const segW = (cnt / maxTotal) * 100;
+                        const color = palette[vi % palette.length];
+                        h += `<div class="viz-dist-bar-segment" style="left:${offsetPct}%;width:${segW}%;background:${color}" title="${v}: ${cnt}"></div>`;
+                        offsetPct += segW;
+                    }
+                });
+                h += `</div><span class="viz-dist-bar-meta"><b>${total}</b></span></div>`;
+            });
+            h += '</div></div>';
+
+            if (allOtherVals.length <= 12) {
+                h += '<div class="viz-relation-legend">';
+                allOtherVals.forEach((v, vi) => {
+                    h += `<span class="viz-relation-legend-item"><span class="viz-relation-legend-dot" style="background:${palette[vi % palette.length]}"></span>${v}</span>`;
+                });
+                h += '</div>';
+            }
+        }
+
         h += '</div>';
         el.innerHTML = h;
     }
