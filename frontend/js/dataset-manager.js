@@ -1058,11 +1058,11 @@ class DatasetManagerUI {
     onPpMouseDown(e) {
         const nodeEl = e.target.closest('.bp-node');
         if (nodeEl) {
-            this.selectedPpNode = nodeEl.dataset.id;
-            this.renderPpNodes();
-            this.draggingNode = this.ppNodes.find(n => n.id === nodeEl.dataset.id);
             const rect = nodeEl.getBoundingClientRect();
             this.dragOff = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            this.selectedPpNode = nodeEl.dataset.id;
+            this.draggingNode = this.ppNodes.find(n => n.id === nodeEl.dataset.id);
+            this.renderPpNodes();
             e.preventDefault();
         } else {
             this.selectedPpNode = null;
@@ -1072,10 +1072,10 @@ class DatasetManagerUI {
 
     onPpMouseMove(e) {
         if (!this.draggingNode) return;
-        const canvas = document.getElementById('ppCanvas');
-        const cr = canvas.getBoundingClientRect();
-        this.draggingNode.x = Math.max(0, e.clientX - cr.left - this.dragOff.x + canvas.scrollLeft);
-        this.draggingNode.y = Math.max(0, e.clientY - cr.top - this.dragOff.y + canvas.scrollTop);
+        const container = document.getElementById('ppNodes');
+        const cr = container.getBoundingClientRect();
+        this.draggingNode.x = Math.max(0, e.clientX - cr.left - this.dragOff.x);
+        this.draggingNode.y = Math.max(0, e.clientY - cr.top - this.dragOff.y);
         this.renderPpNodes();
         this.renderPpConns();
     }
