@@ -216,6 +216,9 @@ class DatasetManagerUI {
 
     renderOverview(ds) {
         const panel = document.getElementById('dsInfoPanel');
+        const currentLabel = ds.metadata?.label_column || null;
+        const isCsv = ds.dataset_type === 'tabular_csv';
+
         panel.innerHTML = `
             <div class="ds-info-card"><div class="ds-info-label">Type</div><div class="ds-info-value text">${this.fmtType(ds.dataset_type)}</div></div>
             <div class="ds-info-card"><div class="ds-info-label">Samples</div><div class="ds-info-value">${ds.num_samples.toLocaleString()}</div></div>
@@ -223,9 +226,107 @@ class DatasetManagerUI {
             <div class="ds-info-card"><div class="ds-info-label">Shape</div><div class="ds-info-value">[${ds.input_shape.join(', ')}]</div></div>
             <div class="ds-info-card"><div class="ds-info-label">Size</div><div class="ds-info-value">${this.fmtSize(ds.file_size)}</div></div>
             <div class="ds-info-card"><div class="ds-info-label">Created</div><div class="ds-info-value text">${new Date(ds.created_at).toLocaleString()}</div></div>
+            ${isCsv ? `
+            <div class="ds-info-card" style="grid-column:1/-1">
+                <div class="ds-info-label">Target Column</div>
+                <div class="ds-target-selector">
+                    <select id="dsTargetSelect" class="ds-target-select">
+                        <option value="">— Select target —</option>
+                        ${currentLabel ? `<option value="${currentLabel}" selected>${currentLabel} (current)</option>` : ''}
+                    </select>
+                    <button id="dsTargetApply" class="ds-target-apply-btn">Apply</button>
+                    <span id="dsTargetStatus" class="ds-target-status"></span>
+                </div>
+            </div>
+            ` : ''}
             ${ds.class_names && ds.class_names.length > 0 ? '<div class="ds-info-card" style="grid-column:1/-1"><div class="ds-info-label">Classes</div><div class="ds-info-value text">' + ds.class_names.join(', ') + '</div></div>' : ''}
             ${ds.split_info && Object.keys(ds.split_info).length > 0 ? '<div class="ds-info-card" style="grid-column:1/-1"><div class="ds-info-label">Split</div><div class="ds-info-value text">' + Object.entries(ds.split_info).map(([k,v]) => k+': '+v).join(' · ') + '</div></div>' : ''}
         `;
+
+        if (isCsv) {
+            this.loadTargetColumns();
+            document.getElementById('dsTargetApply').addEventListener('click', () => this.applyTargetColumn());
+        }
+    }
+
+    async loadTargetColumns() {
+        const sel = document.getElementById('dsTargetSelect');
+        if (!sel || !this.selectedId) return;
+
+        try {
+            const res = await fetch(`${DS_API}/datasets/${this.selectedId}/target-columns`);
+            const r = await res.json();
+            if (!r.valid) return;
+
+            const currentLabel = r.current_label;
+            sel.innerHTML = '<option value="">— Select target —</option>';
+            r.columns.forEach(col => {
+                const opt = document.createElement('option');
+                opt.value = col.name;
+                opt.textContent = `${col.name} (${col.type}, ${col.unique_count} unique)`;
+                opt.dataset.type = col.type;
+                opt.dataset.suitable = col.suitable_as_target;
+                if (col.name === currentLabel) opt.selected = true;
+                sel.appendChild(opt);
+            });
+        } catch (e) {
+            console.error('Failed to load target columns:', e);
+        }
+    }
+
+    async applyTargetColumn() {
+        const sel = document.getElementById('dsTargetSelect');
+        const status = document.getElementById('dsTargetStatus');
+        const column = sel?.value;
+        if (!column || !this.selectedId) return;
+
+        const btn = document.getElementById('dsTargetApply');
+        btn.disabled = true;
+        btn.textContent = 'Applying...';
+        status.textContent = '';
+        status.className = 'ds-target-status';
+
+        try {
+            const res = await fetch(`${DS_API}/datasets/${this.selectedId}/label-column?label_column=${encodeURIComponent(column)}`, {
+                method: 'PUT'
+            });
+            const r = await res.json();
+            if (r.valid) {
+                status.textContent = `✓ ${r.message} (${r.num_classes} classes)`;
+                status.className = 'ds-target-status success';
+
+                const ds = this.datasets.find(d => d.id === this.selectedId);
+                if (ds) {
+                    ds.num_classes = r.num_classes;
+                    ds.class_names = r.class_names;
+                    ds.input_shape = r.input_shape;
+                    if (!ds.metadata) ds.metadata = {};
+                    ds.metadata.label_column = column;
+                    ds.metadata.label_distribution = r.label_distribution;
+                }
+
+                const badges = document.getElementById('dsViewBadges');
+                if (badges && ds) {
+                    badges.innerHTML = `
+                        <span class="ds-badge type">${this.fmtType(ds.dataset_type)}</span>
+                        <span class="ds-badge samples">${ds.num_samples.toLocaleString()} samples</span>
+                        ${ds.num_classes > 0 ? `<span class="ds-badge classes">${ds.num_classes} classes</span>` : ''}
+                        <span class="ds-badge shape">[${ds.input_shape.join(', ')}]</span>
+                    `;
+                }
+
+                this.renderOverview(ds);
+            } else {
+                status.textContent = `✗ ${r.errors.join(', ')}`;
+                status.className = 'ds-target-status error';
+            }
+        } catch (e) {
+            status.textContent = `✗ Failed: ${e.message}`;
+            status.className = 'ds-target-status error';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Apply';
+        }
     }
 
     async showPreview() {
