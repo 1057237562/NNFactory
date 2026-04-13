@@ -9,3 +9,6 @@ venv/
 env/
 temp/
 *.nn
+.dataset_cache/
+datasets/
+models/
