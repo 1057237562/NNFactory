@@ -421,23 +421,7 @@ body {
     height: 100%;
 }
 
-#connectionSvg {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-}
 
-#connectionSvg path {
-    pointer-events: stroke;
-    cursor: pointer;
-}
-
-#connectionSvg path:hover {
-    stroke-width: 4 !important;
-}
 
 .canvas-controls {
     position: absolute;

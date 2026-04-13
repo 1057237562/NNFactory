@@ -1056,6 +1056,7 @@ class DatasetManagerUI {
     }
 
     onPpMouseDown(e) {
+        if (e.target.closest('.bp-node-del')) return;
         const nodeEl = e.target.closest('.bp-node');
         if (nodeEl) {
             const rect = nodeEl.getBoundingClientRect();

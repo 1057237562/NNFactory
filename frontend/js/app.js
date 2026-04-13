@@ -11,6 +11,52 @@ class App {
         window.app = this;
         
         this.init();
+        this.loadFromLocalStorage();
+    }
+    
+    loadFromLocalStorage() {
+        const saved = localStorage.getItem('nnfactory_autosave');
+        if (saved) {
+            try {
+                const blueprint = JSON.parse(saved);
+                this.nodeManager.importNodes(blueprint.layers || []);
+                this.connectionManager.importConnections(blueprint.connections || []);
+                
+                if (blueprint.model_name) {
+                    const modelNameEl = document.getElementById('modelName');
+                    if (modelNameEl) modelNameEl.value = blueprint.model_name;
+                }
+                if (blueprint.use_jit !== undefined) {
+                    const jitEl = document.getElementById('useJit');
+                    if (jitEl) jitEl.checked = blueprint.use_jit;
+                }
+                if (blueprint.use_compile !== undefined) {
+                    const compileEl = document.getElementById('useCompile');
+                    if (compileEl) compileEl.checked = blueprint.use_compile;
+                }
+                if (blueprint.device !== undefined) {
+                    const deviceEl = document.getElementById('deviceSelect');
+                    if (deviceEl) deviceEl.value = blueprint.device;
+                }
+                
+                this.renderConnections();
+                // Trigger autosave only after both nodes and connections are fully imported
+                this.saveToLocalStorage();
+                this.showToast('Session restored!', 'success');
+            } catch (error) {
+                console.error('Failed to restore session from localStorage:', error);
+                this.showToast('Failed to restore previous session.', 'error');
+            }
+        }
+    }
+
+    saveToLocalStorage() {
+        try {
+            const blueprint = this.getBlueprint();
+            localStorage.setItem('nnfactory_autosave', JSON.stringify(blueprint));
+        } catch (error) {
+            console.error('Failed to save session to localStorage:', error);
+        }
     }
     
     init() {
@@ -63,6 +109,13 @@ class App {
                 this.closeWeightsModal();
             }
             if ((e.key === 'Delete' || e.key === 'Backspace') && !this.isInputFocused()) {
+                if (this.connectionManager.selectedConnection !== null) {
+                    e.preventDefault();
+                    this.connectionManager.removeConnection(this.connectionManager.selectedConnection);
+                    this.connectionManager.selectedConnection = null;
+                    this.canvas.render();
+                    return;
+                }
                 if (this.nodeManager.selectedNode) {
                     this.nodeManager.deleteNode(this.nodeManager.selectedNode.id);
                     this.propertiesPanel.hide();
@@ -70,11 +123,7 @@ class App {
             }
         });
         
-        this.canvas.container.addEventListener('click', (e) => {
-            if (e.target === this.canvas.container || e.target === this.canvas.canvas) {
-                this.nodeManager.deselectAll();
-            }
-        });
+ 
     }
     
     setupCategoryToggles() {
@@ -95,12 +144,15 @@ class App {
         });
     }
     
-    onNodesChanged() {
+   onNodesChanged() {
         this.renderConnections();
+        this.saveToLocalStorage();
+        this.nodeManager.updateCounts();
     }
     
     onConnectionsChanged() {
         this.renderConnections();
+        this.saveToLocalStorage();
     }
     
     isInputFocused() {
@@ -118,7 +170,7 @@ class App {
             device: document.getElementById('deviceSelect').value || 'cpu'
         };
     }
-    
+
     async generateCode() {
         const blueprint = this.getBlueprint();
         

@@ -54,12 +54,24 @@ class NodeManager {
             output: {}
         };
         
+        this.nodeWidth = 160;
+        this.nodeHeight = 70;
+        this.headerHeight = 24;
+        this.portRadius = 6;
+        
+        this.clickStartX = 0;
+        this.clickStartY = 0;
+        this.clickStartTime = 0;
+        
         this.init();
     }
     
     init() {
         this.canvas.container.addEventListener('dragover', (e) => e.preventDefault());
         this.canvas.container.addEventListener('drop', (e) => this.onDrop(e));
+        this.canvas.container.addEventListener('mousedown', (e) => this.onCanvasMouseDown(e));
+        this.canvas.container.addEventListener('mousemove', (e) => this.onCanvasMouseMove(e));
+        this.canvas.container.addEventListener('mouseup', (e) => this.onCanvasMouseUp(e));
         
         document.querySelectorAll('.layer-item').forEach(item => {
             item.addEventListener('dragstart', (e) => {
@@ -82,6 +94,8 @@ class NodeManager {
             this.createNode('output', rect.width / 2 / this.canvas.scale - this.canvas.offsetX / this.canvas.scale + 200, 
                            rect.height / 2 / this.canvas.scale - this.canvas.offsetY / this.canvas.scale);
         });
+        
+         
     }
     
     onDrop(e) {
@@ -109,55 +123,19 @@ class NodeManager {
             params: params || { ...this.layerDefaults[type] },
             x: snappedX,
             y: snappedY,
-            width: 160,
-            height: 70
+            width: this.nodeWidth,
+            height: this.nodeHeight
         };
         
         this.nodes.set(nodeId, node);
-        this.renderNode(node);
-        this.updateCounts();
         
         if (window.app && window.app.onNodesChanged) {
             window.app.onNodesChanged();
         }
         
+        this.canvas.render();
+        
         return node;
-    }
-    
-    renderNode(node) {
-        let el = document.getElementById(node.id);
-        if (!el) {
-            el = document.createElement('div');
-            el.id = node.id;
-            el.className = 'node';
-            el.innerHTML = this.getNodeHTML(node);
-            this.canvas.wrapper.appendChild(el);
-            
-            el.addEventListener('mousedown', (e) => this.onNodeMouseDown(e, node));
-            el.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.selectNode(node);
-            });
-        }
-        
-        el.style.left = node.x + 'px';
-        el.style.top = node.y + 'px';
-        el.style.width = node.width + 'px';
-    }
-    
-    getNodeHTML(node) {
-        const category = this.layerCategories[node.type] || 'utility';
-        const displayName = this.getDisplayName(node.type);
-        const paramSummary = this.getParamSummary(node);
-        
-        return `
-            <div class="node-header ${category}">${displayName}</div>
-            <div class="node-body">${paramSummary}</div>
-            <div class="node-ports">
-                <div class="port input-port" data-node="${node.id}" data-port="input"></div>
-                <div class="port output-port" data-node="${node.id}" data-port="output"></div>
-            </div>
-        `;
     }
     
     getDisplayName(type) {
@@ -195,97 +173,326 @@ class NodeManager {
         }
     }
     
-    onNodeMouseDown(e, node) {
-        if (e.target.classList.contains('port')) return;
-        
-        e.stopPropagation();
-        this.draggingNode = node;
-        
-        const el = document.getElementById(node.id);
-        const rect = el.getBoundingClientRect();
-        this.dragOffsetX = e.clientX - rect.left;
-        this.dragOffsetY = e.clientY - rect.top;
-        
-        el.classList.add('dragging');
-        el.style.transition = 'none';
-        
-        const onMouseMove = (e) => {
-            if (!this.draggingNode) return;
-            
-            const containerRect = this.canvas.container.getBoundingClientRect();
-            const rawX = (e.clientX - containerRect.left - this.dragOffsetX) / this.canvas.scale;
-            const rawY = (e.clientY - containerRect.top - this.dragOffsetY) / this.canvas.scale;
-            
-            node.x = rawX;
-            node.y = rawY;
-            
-            el.style.left = node.x + 'px';
-            el.style.top = node.y + 'px';
-            
-            if (window.app && window.app.connectionManager) {
-                window.app.connectionManager.render();
-            }
+    getNodeColor(category) {
+        const colors = {
+            conv: '#3b82f6',
+            pool: '#22c55e',
+            linear: '#a855f7',
+            norm: '#f97316',
+            activation: '#ec4899',
+            transformer: '#06b6d4',
+            rnn: '#8b5cf6',
+            regularization: '#64748b',
+            utility: '#94a3b8'
         };
+        return colors[category] || '#94a3b8';
+    }
+    
+    renderNode(ctx, node) {
+        const x = node.x;
+        const y = node.y;
+        const w = node.width;
+        const h = node.height;
         
-        const onMouseUp = () => {
-            el.classList.remove('dragging');
-            el.style.transition = '';
+        const category = this.layerCategories[node.type] || 'utility';
+        const headerColor = this.getNodeColor(category);
+        const displayName = this.getDisplayName(node.type);
+        const paramSummary = this.getParamSummary(node);
+        
+        const isSelected = this.selectedNode === node;
+        const isDragging = this.draggingNode === node;
+        
+        ctx.save();
+        
+        if (isSelected || isDragging) {
+            ctx.shadowColor = headerColor;
+            ctx.shadowBlur = 15;
+            ctx.shadowOffsetY = 4;
+        }
+        
+        ctx.fillStyle = '#1e1e2e';
+        ctx.strokeStyle = isSelected ? headerColor : '#3f3f46';
+        ctx.lineWidth = isSelected ? 2 : 1;
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, 8);
+        ctx.fill();
+        ctx.stroke();
+        
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = headerColor;
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, this.headerHeight, 8);
+        ctx.fill();
+        
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 12px Inter, system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(displayName, x + w / 2, y + this.headerHeight / 2);
+        
+        ctx.font = '11px Inter, system-ui, sans-serif';
+        ctx.fillStyle = '#94a3b8';
+        if (paramSummary) {
+            ctx.fillText(paramSummary, x + w / 2, y + this.headerHeight + h / 2);
+        }
+        
+        const inputPortX = x;
+        const inputPortY = y + h / 2;
+        this.renderPort(ctx, inputPortX, inputPortY, 'input', headerColor, isSelected);
+        
+        const outputPortX = x + w;
+        this.renderPort(ctx, outputPortX, inputPortY, 'output', headerColor, isSelected);
+        
+        ctx.restore();
+    }
+    
+    renderPort(ctx, x, y, type, headerColor, isSelected) {
+        ctx.save();
+        
+        // Port glow
+        if (isSelected) {
+            ctx.shadowColor = headerColor;
+            ctx.shadowBlur = 10;
+        }
+        
+        // Port circle
+        ctx.fillStyle = '#1e1e2e';
+        ctx.strokeStyle = headerColor;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, this.portRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        
+        // Inner dot
+        ctx.fillStyle = headerColor;
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+    
+    getPortPosition(nodeId, portType) {
+        const node = this.nodes.get(nodeId);
+        if (!node) return { x: 0, y: 0 };
+        
+        if (portType === 'input') {
+            return { x: node.x, y: node.y + node.height / 2 };
+        } else {
+            return { x: node.x + node.width, y: node.y + node.height / 2 };
+        }
+    }
+    
+    getNodeAtPosition(worldX, worldY) {
+        const nodesArray = Array.from(this.nodes.values()).reverse();
+        for (const node of nodesArray) {
+            if (worldX >= node.x && worldX <= node.x + node.width &&
+                worldY >= node.y && worldY <= node.y + node.height) {
+                return node;
+            }
+        }
+        return null;
+    }
+    
+    isNearPort(worldX, worldY, nodeId, portType, threshold = 10) {
+        const pos = this.getPortPosition(nodeId, portType);
+        const dx = worldX - pos.x;
+        const dy = worldY - pos.y;
+        return Math.sqrt(dx * dx + dy * dy) <= threshold;
+    }
+    
+    onCanvasMouseDown(e) {
+        const rect = this.canvas.container.getBoundingClientRect();
+        const worldPos = this.canvas.screenToWorld(
+            e.clientX - rect.left,
+            e.clientY - rect.top
+        );
+        
+        this.clickStartX = worldPos.x;
+        this.clickStartY = worldPos.y;
+        this.clickStartTime = Date.now();
+        
+        const clickedNode = this.getNodeAtPosition(worldPos.x, worldPos.y);
+        
+        if (clickedNode) {
+            const outputPos = this.getPortPosition(clickedNode.id, 'output');
+            if (Math.abs(worldPos.x - outputPos.x) <= this.portRadius * 2 &&
+                Math.abs(worldPos.y - outputPos.y) <= this.portRadius * 2) {
+                this.startConnectionDrag(clickedNode.id, 'output', worldPos.x, worldPos.y);
+                return;
+            }
             
-            node.x = this.canvas.snapToGrid(node.x);
-            node.y = this.canvas.snapToGrid(node.y);
-            el.style.left = node.x + 'px';
-            el.style.top = node.y + 'px';
+            const inputPos = this.getPortPosition(clickedNode.id, 'input');
+            if (Math.abs(worldPos.x - inputPos.x) <= this.portRadius * 2 &&
+                Math.abs(worldPos.y - inputPos.y) <= this.portRadius * 2) {
+                this.startConnectionDrag(clickedNode.id, 'input', worldPos.x, worldPos.y);
+                return;
+            }
             
+            this.draggingNode = clickedNode;
+            this.dragOffsetX = worldPos.x - clickedNode.x;
+            this.dragOffsetY = worldPos.y - clickedNode.y;
+            
+            this.selectNode(clickedNode);
+            this.canvas.render();
+        } else {
+            this.deselectAll();
+            this.canvas.render();
+        }
+    }
+    
+    onCanvasMouseMove(e) {
+        const rect = this.canvas.container.getBoundingClientRect();
+        const worldPos = this.canvas.screenToWorld(
+            e.clientX - rect.left,
+            e.clientY - rect.top
+        );
+        
+        if (this.draggingNode) {
+            const newX = worldPos.x - this.dragOffsetX;
+            const newY = worldPos.y - this.dragOffsetY;
+            this.draggingNode.x = newX;
+            this.draggingNode.y = newY;
+            this.canvas.render();
+        }
+        
+        if (this.tempConnection) {
+            this.tempConnection.endX = worldPos.x;
+            this.tempConnection.endY = worldPos.y;
+            this.canvas.render();
+        }
+    }
+    
+    onCanvasMouseUp(e) {
+        const rect = this.canvas.container.getBoundingClientRect();
+        const worldPos = this.canvas.screenToWorld(
+            e.clientX - rect.left,
+            e.clientY - rect.top
+        );
+        
+        const clickDistance = Math.sqrt(
+            Math.pow(worldPos.x - this.clickStartX, 2) + 
+            Math.pow(worldPos.y - this.clickStartY, 2)
+        );
+        const clickDuration = Date.now() - this.clickStartTime;
+        
+        if (this.draggingNode) {
+            this.draggingNode.x = this.canvas.snapToGrid(this.draggingNode.x);
+            this.draggingNode.y = this.canvas.snapToGrid(this.draggingNode.y);
             this.draggingNode = null;
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
             
-            if (window.app && window.app.connectionManager) {
-                window.app.connectionManager.render();
+            if (window.app && window.app.onNodesChanged) {
+                window.app.onNodesChanged();
             }
-        };
+            
+            this.canvas.render();
+            return;
+        }
         
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
+    if (clickDistance < 5 && clickDuration < 200) {
+            const clickedNode = this.getNodeAtPosition(worldPos.x, worldPos.y);
+            
+            if (clickedNode) {
+                const pos = this.getPortPosition(clickedNode.id, 'output');
+                const distToOutput = Math.sqrt(
+                    Math.pow(worldPos.x - pos.x, 2) + Math.pow(worldPos.y - pos.y, 2)
+                );
+                
+                const pos2 = this.getPortPosition(clickedNode.id, 'input');
+                const distToInput = Math.sqrt(
+                    Math.pow(worldPos.x - pos2.x, 2) + Math.pow(worldPos.y - pos2.y, 2)
+                );
+                
+                if (distToOutput > 15 && distToInput > 15) {
+                    this.selectNode(clickedNode);
+                    this.canvas.render();
+                }
+            } else {
+                // Clicked on empty space - deselect
+                this.deselectAll();
+                this.canvas.render();
+            }
+            return;
+        }
+        
+        if (this.tempConnection) {
+            const targetNode = this.getNodeAtPosition(worldPos.x, worldPos.y);
+            if (targetNode && targetNode.id !== this.tempConnection.startNode) {
+                const startPos = this.getPortPosition(this.tempConnection.startNode, this.tempConnection.startPort);
+                const endPos = this.getPortPosition(targetNode.id, 'input');
+                const dx = worldPos.x - endPos.x;
+                const dy = worldPos.y - endPos.y;
+                
+                if (Math.sqrt(dx * dx + dy * dy) <= this.portRadius * 3) {
+                    if (window.app && window.app.connectionManager) {
+                        window.app.connectionManager.addConnection(this.tempConnection.startNode, targetNode.id);
+                    }
+                }
+            }
+            
+            this.tempConnection = null;
+            this.canvas.render();
+        }
+    }
+    
+    startConnectionDrag(nodeId, portType, startX, startY) {
+        this.tempConnection = {
+            startNode: nodeId,
+            startPort: portType,
+            startX: startX,
+            startY: startY,
+            endX: startX,
+            endY: startY
+        };
+        this.canvas.render();
     }
     
     selectNode(node) {
-        document.querySelectorAll('.node.selected').forEach(el => el.classList.remove('selected'));
+        if (this.selectedNode) {
+            this.canvas.render();
+        }
         
         this.selectedNode = node;
-        const el = document.getElementById(node.id);
-        if (el) el.classList.add('selected');
         
         if (window.app && window.app.propertiesPanel) {
             window.app.propertiesPanel.show(node);
         }
+        
+        this.canvas.render();
     }
     
     deselectAll() {
-        document.querySelectorAll('.node.selected').forEach(el => el.classList.remove('selected'));
-        this.selectedNode = null;
-        if (window.app && window.app.propertiesPanel) {
-            window.app.propertiesPanel.hide();
+        if (this.selectedNode) {
+            this.selectedNode = null;
+            if (window.app && window.app.propertiesPanel) {
+                window.app.propertiesPanel.hide();
+            }
+            this.canvas.render();
         }
     }
     
     deleteNode(nodeId) {
-        const el = document.getElementById(nodeId);
-        if (el) el.remove();
-        this.nodes.delete(nodeId);
-        
-        if (this.selectedNode && this.selectedNode.id === nodeId) {
-            this.selectedNode = null;
-        }
-        
-        if (window.app && window.app.connectionManager) {
-            window.app.connectionManager.removeConnectionsForNode(nodeId);
-        }
-        
-        this.updateCounts();
-        
-        if (window.app && window.app.onNodesChanged) {
-            window.app.onNodesChanged();
+        const node = this.nodes.get(nodeId);
+        if (node) {
+            this.nodes.delete(nodeId);
+            
+            if (this.selectedNode && this.selectedNode.id === nodeId) {
+                this.selectedNode = null;
+            }
+            
+            if (window.app && window.app.connectionManager) {
+                window.app.connectionManager.removeConnectionsForNode(nodeId);
+            }
+            
+            this.updateCounts();
+            
+            if (window.app && window.app.onNodesChanged) {
+                window.app.onNodesChanged();
+            }
+            
+            this.canvas.render();
         }
     }
     
@@ -293,10 +500,12 @@ class NodeManager {
         const node = this.nodes.get(nodeId);
         if (node) {
             node.params = { ...node.params, ...params };
-            const el = document.getElementById(nodeId);
-            if (el) {
-                el.querySelector('.node-body').textContent = this.getParamSummary(node);
+            
+            if (window.app && window.app.onNodesChanged) {
+                window.app.onNodesChanged();
             }
+            
+            this.canvas.render();
         }
     }
     
@@ -309,13 +518,15 @@ class NodeManager {
     }
     
     clear() {
-        this.nodes.forEach((node) => {
-            const el = document.getElementById(node.id);
-            if (el) el.remove();
-        });
         this.nodes.clear();
         this.selectedNode = null;
         this.updateCounts();
+        
+        if (window.app && window.app.onNodesChanged) {
+            window.app.onNodesChanged();
+        }
+        
+        this.canvas.render();
     }
     
     exportNodes() {
