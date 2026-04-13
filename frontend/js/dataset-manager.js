@@ -216,6 +216,9 @@ class DatasetManagerUI {
 
     renderOverview(ds) {
         const panel = document.getElementById('dsInfoPanel');
+        const currentLabel = ds.metadata?.label_column || null;
+        const isCsv = ds.dataset_type === 'tabular_csv';
+
         panel.innerHTML = `
             <div class="ds-info-card"><div class="ds-info-label">Type</div><div class="ds-info-value text">${this.fmtType(ds.dataset_type)}</div></div>
             <div class="ds-info-card"><div class="ds-info-label">Samples</div><div class="ds-info-value">${ds.num_samples.toLocaleString()}</div></div>
@@ -223,9 +226,107 @@ class DatasetManagerUI {
             <div class="ds-info-card"><div class="ds-info-label">Shape</div><div class="ds-info-value">[${ds.input_shape.join(', ')}]</div></div>
             <div class="ds-info-card"><div class="ds-info-label">Size</div><div class="ds-info-value">${this.fmtSize(ds.file_size)}</div></div>
             <div class="ds-info-card"><div class="ds-info-label">Created</div><div class="ds-info-value text">${new Date(ds.created_at).toLocaleString()}</div></div>
+            ${isCsv ? `
+            <div class="ds-info-card" style="grid-column:1/-1">
+                <div class="ds-info-label">Target Column</div>
+                <div class="ds-target-selector">
+                    <select id="dsTargetSelect" class="ds-target-select">
+                        <option value="">— Select target —</option>
+                        ${currentLabel ? `<option value="${currentLabel}" selected>${currentLabel} (current)</option>` : ''}
+                    </select>
+                    <button id="dsTargetApply" class="ds-target-apply-btn">Apply</button>
+                    <span id="dsTargetStatus" class="ds-target-status"></span>
+                </div>
+            </div>
+            ` : ''}
             ${ds.class_names && ds.class_names.length > 0 ? '<div class="ds-info-card" style="grid-column:1/-1"><div class="ds-info-label">Classes</div><div class="ds-info-value text">' + ds.class_names.join(', ') + '</div></div>' : ''}
             ${ds.split_info && Object.keys(ds.split_info).length > 0 ? '<div class="ds-info-card" style="grid-column:1/-1"><div class="ds-info-label">Split</div><div class="ds-info-value text">' + Object.entries(ds.split_info).map(([k,v]) => k+': '+v).join(' · ') + '</div></div>' : ''}
         `;
+
+        if (isCsv) {
+            this.loadTargetColumns();
+            document.getElementById('dsTargetApply').addEventListener('click', () => this.applyTargetColumn());
+        }
+    }
+
+    async loadTargetColumns() {
+        const sel = document.getElementById('dsTargetSelect');
+        if (!sel || !this.selectedId) return;
+
+        try {
+            const res = await fetch(`${DS_API}/datasets/${this.selectedId}/target-columns`);
+            const r = await res.json();
+            if (!r.valid) return;
+
+            const currentLabel = r.current_label;
+            sel.innerHTML = '<option value="">— Select target —</option>';
+            r.columns.forEach(col => {
+                const opt = document.createElement('option');
+                opt.value = col.name;
+                opt.textContent = `${col.name} (${col.type}, ${col.unique_count} unique)`;
+                opt.dataset.type = col.type;
+                opt.dataset.suitable = col.suitable_as_target;
+                if (col.name === currentLabel) opt.selected = true;
+                sel.appendChild(opt);
+            });
+        } catch (e) {
+            console.error('Failed to load target columns:', e);
+        }
+    }
+
+    async applyTargetColumn() {
+        const sel = document.getElementById('dsTargetSelect');
+        const status = document.getElementById('dsTargetStatus');
+        const column = sel?.value;
+        if (!column || !this.selectedId) return;
+
+        const btn = document.getElementById('dsTargetApply');
+        btn.disabled = true;
+        btn.textContent = 'Applying...';
+        status.textContent = '';
+        status.className = 'ds-target-status';
+
+        try {
+            const res = await fetch(`${DS_API}/datasets/${this.selectedId}/label-column?label_column=${encodeURIComponent(column)}`, {
+                method: 'PUT'
+            });
+            const r = await res.json();
+            if (r.valid) {
+                status.textContent = `✓ ${r.message} (${r.num_classes} classes)`;
+                status.className = 'ds-target-status success';
+
+                const ds = this.datasets.find(d => d.id === this.selectedId);
+                if (ds) {
+                    ds.num_classes = r.num_classes;
+                    ds.class_names = r.class_names;
+                    ds.input_shape = r.input_shape;
+                    if (!ds.metadata) ds.metadata = {};
+                    ds.metadata.label_column = column;
+                    ds.metadata.label_distribution = r.label_distribution;
+                }
+
+                const badges = document.getElementById('dsViewBadges');
+                if (badges && ds) {
+                    badges.innerHTML = `
+                        <span class="ds-badge type">${this.fmtType(ds.dataset_type)}</span>
+                        <span class="ds-badge samples">${ds.num_samples.toLocaleString()} samples</span>
+                        ${ds.num_classes > 0 ? `<span class="ds-badge classes">${ds.num_classes} classes</span>` : ''}
+                        <span class="ds-badge shape">[${ds.input_shape.join(', ')}]</span>
+                    `;
+                }
+
+                this.renderOverview(ds);
+            } else {
+                status.textContent = `✗ ${r.errors.join(', ')}`;
+                status.className = 'ds-target-status error';
+            }
+        } catch (e) {
+            status.textContent = `✗ Failed: ${e.message}`;
+            status.className = 'ds-target-status error';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Apply';
+        }
     }
 
     async showPreview() {
@@ -482,12 +583,14 @@ class DatasetManagerUI {
                 document.getElementById('vizBarChartContainer').style.display = 'none';
                 this.drawHistogram(cs.histogram, col);
                 this.renderNumericSummary(cs.statistics);
+                this.renderColumnRelations(cs.relations || {}, col);
             } else if ((type === 'categorical' || type === 'label') && cs.histogram && cs.histogram.type === 'categorical') {
                 document.getElementById('vizCorrHeatmap').parentElement.style.display = 'none';
                 document.getElementById('vizHistogramContainer').style.display = 'none';
                 document.getElementById('vizBarChartContainer').style.display = '';
                 this.drawCategoricalBarChart(cs.histogram, col);
                 this.renderCategoricalSummary(cs.value_counts);
+                this.renderColumnRelations(cs.relations || {}, col);
             }
         } catch (e) { console.error('Failed to load column data:', e); }
     }
@@ -649,6 +752,76 @@ class DatasetManagerUI {
             h += `<div class="viz-stat-card"><span class="viz-stat-card-lbl">Top</span><span class="viz-stat-card-val">${entries[0][0]}</span></div>`;
             h += `<div class="viz-stat-card"><span class="viz-stat-card-lbl">Top %</span><span class="viz-stat-card-val">${((entries[0][1] / total) * 100).toFixed(1)}%</span></div>`;
         }
+        h += '</div>';
+        el.innerHTML = h;
+    }
+
+    renderColumnRelations(relations, sourceCol) {
+        const el = document.getElementById('vizStatSummary');
+        if (!el || (!relations.numeric && !relations.categorical) || 
+            (Object.keys(relations.numeric).length === 0 && Object.keys(relations.categorical).length === 0)) {
+            return;
+        }
+        let h = el.innerHTML || '';
+        h += '<div class="viz-relations-section">';
+        h += '<h6 class="viz-relations-title">Relations with Other Columns</h6>';
+
+        const palette = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#ec4899','#06b6d4','#84cc16','#f97316','#6366f1'];
+
+        for (const [numCol, groupedStats] of Object.entries(relations.numeric || {})) {
+            const entries = Object.entries(groupedStats);
+            const maxCount = Math.max(...entries.map(([, s]) => s.count), 1);
+            h += `<div class="viz-relation-group"><h6 class="viz-relation-col">${numCol}</h6>`;
+            h += '<div class="viz-relation-bars">';
+            entries.forEach(([catVal, stats], idx) => {
+                const pct = (stats.count / maxCount) * 100;
+                const color = palette[idx % palette.length];
+                h += `<div class="viz-dist-bar">`;
+                h += `<span class="viz-dist-bar-label" title="${catVal}">${catVal.length > 14 ? catVal.substring(0, 13) + '…' : catVal}</span>`;
+                h += `<div class="viz-dist-bar-track"><div class="viz-dist-bar-fill" style="width:${pct}%;background:${color}"></div></div>`;
+                h += `<span class="viz-dist-bar-meta"><b>${stats.count}</b>  μ=${stats.mean.toFixed(2)}</span>`;
+                h += `</div>`;
+            });
+            h += '</div></div>';
+        }
+
+        for (const [catCol, contingency] of Object.entries(relations.categorical || {})) {
+            const displayLabel = catCol === '__label__' ? 'Label' : catCol;
+            const allOtherVals = [...new Set(Object.values(contingency).flatMap(Object.keys))].sort();
+            const rowTotals = Object.fromEntries(Object.entries(contingency).map(([k, v]) => [k, Object.values(v).reduce((a, b) => a + b, 0)]));
+            const maxTotal = Math.max(...Object.values(rowTotals), 1);
+
+            h += `<div class="viz-relation-group"><h6 class="viz-relation-col">${displayLabel}</h6>`;
+            h += '<div class="viz-relation-bars">';
+            Object.entries(contingency).forEach(([srcVal, counts], idx) => {
+                const total = rowTotals[srcVal];
+                const pct = (total / maxTotal) * 100;
+                h += `<div class="viz-dist-bar">`;
+                h += `<span class="viz-dist-bar-label" title="${srcVal}">${srcVal.length > 14 ? srcVal.substring(0, 13) + '…' : srcVal}</span>`;
+                h += `<div class="viz-dist-bar-track viz-dist-bar-stacked">`;
+                let offsetPct = 0;
+                allOtherVals.forEach((v, vi) => {
+                    const cnt = counts[v] || 0;
+                    if (cnt > 0) {
+                        const segW = (cnt / maxTotal) * 100;
+                        const color = palette[vi % palette.length];
+                        h += `<div class="viz-dist-bar-segment" style="left:${offsetPct}%;width:${segW}%;background:${color}" title="${v}: ${cnt}"></div>`;
+                        offsetPct += segW;
+                    }
+                });
+                h += `</div><span class="viz-dist-bar-meta"><b>${total}</b></span></div>`;
+            });
+            h += '</div></div>';
+
+            if (allOtherVals.length <= 12) {
+                h += '<div class="viz-relation-legend">';
+                allOtherVals.forEach((v, vi) => {
+                    h += `<span class="viz-relation-legend-item"><span class="viz-relation-legend-dot" style="background:${palette[vi % palette.length]}"></span>${v}</span>`;
+                });
+                h += '</div>';
+            }
+        }
+
         h += '</div>';
         el.innerHTML = h;
     }
@@ -883,13 +1056,14 @@ class DatasetManagerUI {
     }
 
     onPpMouseDown(e) {
+        if (e.target.closest('.bp-node-del')) return;
         const nodeEl = e.target.closest('.bp-node');
         if (nodeEl) {
-            this.selectedPpNode = nodeEl.dataset.id;
-            this.renderPpNodes();
-            this.draggingNode = this.ppNodes.find(n => n.id === nodeEl.dataset.id);
             const rect = nodeEl.getBoundingClientRect();
             this.dragOff = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            this.selectedPpNode = nodeEl.dataset.id;
+            this.draggingNode = this.ppNodes.find(n => n.id === nodeEl.dataset.id);
+            this.renderPpNodes();
             e.preventDefault();
         } else {
             this.selectedPpNode = null;
@@ -899,10 +1073,10 @@ class DatasetManagerUI {
 
     onPpMouseMove(e) {
         if (!this.draggingNode) return;
-        const canvas = document.getElementById('ppCanvas');
-        const cr = canvas.getBoundingClientRect();
-        this.draggingNode.x = Math.max(0, e.clientX - cr.left - this.dragOff.x + canvas.scrollLeft);
-        this.draggingNode.y = Math.max(0, e.clientY - cr.top - this.dragOff.y + canvas.scrollTop);
+        const container = document.getElementById('ppNodes');
+        const cr = container.getBoundingClientRect();
+        this.draggingNode.x = Math.max(0, e.clientX - cr.left - this.dragOff.x);
+        this.draggingNode.y = Math.max(0, e.clientY - cr.top - this.dragOff.y);
         this.renderPpNodes();
         this.renderPpConns();
     }

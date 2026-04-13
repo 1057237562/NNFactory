@@ -99,6 +99,7 @@ class TrainingEngine:
         self.is_training = False
         self.should_stop = False
         self._temp_path = None
+        self._weights_path = None
         os.makedirs(self.TEMP_DIR, exist_ok=True)
 
     def _build_model(self, device="cpu"):
@@ -127,6 +128,7 @@ class TrainingEngine:
 
     def _cleanup(self):
         self._temp_path = None
+        self._weights_path = None
 
     def _create_synthetic_dataset(self, config):
         input_size = config.get("input_size", [3, 224, 224])
@@ -320,6 +322,10 @@ class TrainingEngine:
             total_params = sum(p.numel() for p in model.parameters())
             trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
+            weights_filename = f"{self.blueprint.model_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pth"
+            self._weights_path = os.path.join(self.TEMP_DIR, weights_filename)
+            torch.save(model.state_dict(), self._weights_path)
+
             yield {
                 "type": "complete",
                 "epochs_completed": epoch + 1,
@@ -331,7 +337,8 @@ class TrainingEngine:
                 "total_params": total_params,
                 "trainable_params": trainable_params,
                 "total_time": time.time() - start_time,
-                "history": history
+                "history": history,
+                "weights_path": weights_filename
             }
 
         except Exception as e:

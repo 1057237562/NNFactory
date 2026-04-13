@@ -11,6 +11,52 @@ class App {
         window.app = this;
         
         this.init();
+        this.loadFromLocalStorage();
+    }
+    
+    loadFromLocalStorage() {
+        const saved = localStorage.getItem('nnfactory_autosave');
+        if (saved) {
+            try {
+                const blueprint = JSON.parse(saved);
+                this.nodeManager.importNodes(blueprint.layers || []);
+                this.connectionManager.importConnections(blueprint.connections || []);
+                
+                if (blueprint.model_name) {
+                    const modelNameEl = document.getElementById('modelName');
+                    if (modelNameEl) modelNameEl.value = blueprint.model_name;
+                }
+                if (blueprint.use_jit !== undefined) {
+                    const jitEl = document.getElementById('useJit');
+                    if (jitEl) jitEl.checked = blueprint.use_jit;
+                }
+                if (blueprint.use_compile !== undefined) {
+                    const compileEl = document.getElementById('useCompile');
+                    if (compileEl) compileEl.checked = blueprint.use_compile;
+                }
+                if (blueprint.device !== undefined) {
+                    const deviceEl = document.getElementById('deviceSelect');
+                    if (deviceEl) deviceEl.value = blueprint.device;
+                }
+                
+                this.renderConnections();
+                // Trigger autosave only after both nodes and connections are fully imported
+                this.saveToLocalStorage();
+                this.showToast('Session restored!', 'success');
+            } catch (error) {
+                console.error('Failed to restore session from localStorage:', error);
+                this.showToast('Failed to restore previous session.', 'error');
+            }
+        }
+    }
+
+    saveToLocalStorage() {
+        try {
+            const blueprint = this.getBlueprint();
+            localStorage.setItem('nnfactory_autosave', JSON.stringify(blueprint));
+        } catch (error) {
+            console.error('Failed to save session to localStorage:', error);
+        }
     }
     
     init() {
@@ -25,6 +71,7 @@ class App {
         document.getElementById('trainBtn').addEventListener('click', () => this.openTrainModal());
         document.getElementById('evaluateBtn').addEventListener('click', () => this.openEvalModal());
         document.getElementById('exportBtn').addEventListener('click', () => this.exportBlueprint());
+        document.getElementById('weightsBtn').addEventListener('click', () => this.openWeightsModal());
         document.getElementById('importBtn').addEventListener('click', () => document.getElementById('fileInput').click());
         document.getElementById('fileInput').addEventListener('change', (e) => this.importBlueprint(e));
         document.getElementById('clearBtn').addEventListener('click', () => this.clearCanvas());
@@ -32,6 +79,7 @@ class App {
         document.getElementById('closeModal').addEventListener('click', () => this.closeCodeModal());
         document.getElementById('closeTrainModal').addEventListener('click', () => this.closeTrainModal());
         document.getElementById('closeEvalModal').addEventListener('click', () => this.closeEvalModal());
+        document.getElementById('closeWeightsModal').addEventListener('click', () => this.closeWeightsModal());
         
         document.querySelectorAll('.modal-overlay').forEach(overlay => {
             overlay.addEventListener('click', (e) => {
@@ -39,6 +87,7 @@ class App {
                 this.closeTrainModal();
                 this.closeEvalModal();
                 this.closeDatasetModal();
+                this.closeWeightsModal();
             });
         });
         
@@ -47,7 +96,9 @@ class App {
         document.getElementById('startTrainingBtn').addEventListener('click', () => this.startTraining());
         document.getElementById('stopTrainingBtn').addEventListener('click', () => this.stopTraining());
         document.getElementById('trainAgainBtn').addEventListener('click', () => this.resetTrainModal());
+        document.getElementById('exportWeightsBtn').addEventListener('click', () => this.exportWeights());
         document.getElementById('startEvalBtn').addEventListener('click', () => this.startEvaluation());
+        document.getElementById('purgeWeightsBtn').addEventListener('click', () => this.purgeWeights());
         
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
@@ -55,8 +106,16 @@ class App {
                 this.closeTrainModal();
                 this.closeEvalModal();
                 this.closeDatasetModal();
+                this.closeWeightsModal();
             }
             if ((e.key === 'Delete' || e.key === 'Backspace') && !this.isInputFocused()) {
+                if (this.connectionManager.selectedConnection !== null) {
+                    e.preventDefault();
+                    this.connectionManager.removeConnection(this.connectionManager.selectedConnection);
+                    this.connectionManager.selectedConnection = null;
+                    this.canvas.render();
+                    return;
+                }
                 if (this.nodeManager.selectedNode) {
                     this.nodeManager.deleteNode(this.nodeManager.selectedNode.id);
                     this.propertiesPanel.hide();
@@ -64,11 +123,7 @@ class App {
             }
         });
         
-        this.canvas.container.addEventListener('click', (e) => {
-            if (e.target === this.canvas.container || e.target === this.canvas.canvas) {
-                this.nodeManager.deselectAll();
-            }
-        });
+ 
     }
     
     setupCategoryToggles() {
@@ -89,12 +144,15 @@ class App {
         });
     }
     
-    onNodesChanged() {
+   onNodesChanged() {
         this.renderConnections();
+        this.saveToLocalStorage();
+        this.nodeManager.updateCounts();
     }
     
     onConnectionsChanged() {
         this.renderConnections();
+        this.saveToLocalStorage();
     }
     
     isInputFocused() {
@@ -112,7 +170,7 @@ class App {
             device: document.getElementById('deviceSelect').value || 'cpu'
         };
     }
-    
+
     async generateCode() {
         const blueprint = this.getBlueprint();
         
@@ -329,6 +387,7 @@ class App {
         document.getElementById('startTrainingBtn').disabled = false;
         this._trainHistory = null;
         this._trainChart = null;
+        this._weightsFilename = null;
     }
     
     async startTraining() {
@@ -458,6 +517,7 @@ class App {
             document.getElementById('resultValAcc').textContent = event.final_val_acc.toFixed(1) + '%';
             document.getElementById('resultParams').textContent = event.total_params.toLocaleString();
             document.getElementById('resultTime').textContent = this.formatTime(event.total_time);
+            this._weightsFilename = event.weights_path || null;
             this.showToast('Training complete!', 'success');
         }
         
@@ -481,6 +541,150 @@ class App {
         const m = Math.floor(seconds / 60);
         const s = Math.floor(seconds % 60);
         return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+    
+    async exportWeights() {
+        if (!this._weightsFilename) {
+            this.showToast('No trained model weights available. Train a model first.', 'warning');
+            return;
+        }
+        
+        const modelName = document.getElementById('modelName').value || 'NeuralNetwork';
+        const url = `http://localhost:8000/weights/${this._weightsFilename}`;
+        
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error('Weights file not found on server');
+            }
+            const blob = await response.blob();
+            const downloadUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = `${modelName.toLowerCase()}_weights.pth`;
+            a.click();
+            URL.revokeObjectURL(downloadUrl);
+            this.showToast('Weights exported successfully!', 'success');
+        } catch (error) {
+            this.showToast('Failed to export weights: ' + error.message, 'error');
+        }
+    }
+    
+    async openWeightsModal() {
+        document.getElementById('weightsModal').classList.add('active');
+        await this.loadWeightsList();
+    }
+    
+    closeWeightsModal() {
+        document.getElementById('weightsModal').classList.remove('active');
+    }
+    
+    async loadWeightsList() {
+        const container = document.getElementById('weightsList');
+        const emptyState = document.getElementById('weightsEmpty');
+        
+        try {
+            const res = await fetch('http://localhost:8000/weights');
+            const data = await res.json();
+            const weights = data.weights || [];
+            
+            if (weights.length === 0) {
+                emptyState.style.display = '';
+                container.querySelectorAll('.weight-item').forEach(el => el.remove());
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            container.querySelectorAll('.weight-item').forEach(el => el.remove());
+            
+            weights.forEach(w => {
+                const item = document.createElement('div');
+                item.className = 'weight-item';
+                const name = w.filename.replace(/\.pth$/, '').replace(/_\d{8}_\d{6}$/, '');
+                const time = new Date(w.modified * 1000).toLocaleString();
+                item.innerHTML = `
+                    <div class="weight-info">
+                        <span class="weight-name">${name}</span>
+                        <span class="weight-meta">${w.size_human} · ${time}</span>
+                    </div>
+                    <div class="weight-actions">
+                        <button class="btn btn-sm btn-primary weight-download-btn" data-filename="${w.filename}" title="Download">
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                                <path d="M7 1v7M4 5l3 3 3-3M2 10v2a1 1 0 001 1h8a1 1 0 001-1v-2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                            </svg>
+                            Download
+                        </button>
+                        <button class="btn btn-sm btn-danger weight-delete-btn" data-filename="${w.filename}" title="Delete">
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                                <path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6zM14.5 3a1 1 0 00-1-1H13V1a.5.5 0 00-1 0v1H8V1a.5.5 0 00-1 0v1H5.5l-.707-.707A.5.5 0 004 1.5v.5H2.5a.5.5 0 000 1H3v10a1 1 0 001 1h8a1 1 0 001-1V3h.5a.5.5 0 00.5-.5zM5 2h6v1H5V2zM4 3h8v10H4V3z"/>
+                            </svg>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+            
+            container.querySelectorAll('.weight-download-btn').forEach(btn => {
+                btn.addEventListener('click', () => this.downloadWeight(btn.dataset.filename));
+            });
+            
+            container.querySelectorAll('.weight-delete-btn').forEach(btn => {
+                btn.addEventListener('click', () => this.deleteWeight(btn.dataset.filename));
+            });
+        } catch (error) {
+            this.showToast('Failed to load weights: ' + error.message, 'error');
+        }
+    }
+    
+    async downloadWeight(filename) {
+        try {
+            const response = await fetch(`http://localhost:8000/weights/${filename}`);
+            if (!response.ok) {
+                throw new Error('Weights file not found');
+            }
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+            this.showToast('Weights downloaded!', 'success');
+        } catch (error) {
+            this.showToast('Failed to download: ' + error.message, 'error');
+        }
+    }
+    
+    async deleteWeight(filename) {
+        if (!confirm(`Delete ${filename}?`)) return;
+        try {
+            const response = await fetch(`http://localhost:8000/weights/${filename}`, { method: 'DELETE' });
+            const data = await response.json();
+            if (data.status === 'deleted') {
+                this.showToast('Weights deleted', 'success');
+                await this.loadWeightsList();
+            } else {
+                this.showToast('Failed to delete weights', 'error');
+            }
+        } catch (error) {
+            this.showToast('Failed to delete: ' + error.message, 'error');
+        }
+    }
+    
+    async purgeWeights() {
+        if (!confirm('Delete all trained weights? This cannot be undone.')) return;
+        try {
+            const response = await fetch('http://localhost:8000/weights/purge', { method: 'POST' });
+            const data = await response.json();
+            if (data.status === 'purged') {
+                this.showToast('All weights purged', 'success');
+                await this.loadWeightsList();
+            } else {
+                this.showToast('Failed to purge weights', 'error');
+            }
+        } catch (error) {
+            this.showToast('Failed to purge: ' + error.message, 'error');
+        }
     }
     
     openEvalModal() {
