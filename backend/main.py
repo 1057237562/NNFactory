@@ -12,6 +12,7 @@ from typing import Any, Optional
 from code_generator import CodeGenerator
 from training_engine import TrainingEngine
 from dataset_manager import DatasetManager
+from preprocessing_pipeline import PreprocessingPipeline, PreprocessingResult
 
 app = FastAPI(title="NNFactory Backend", version="1.0.0")
 executor = ThreadPoolExecutor(max_workers=4)
@@ -242,6 +243,31 @@ async def get_target_columns(dataset_id: str):
 @app.put("/datasets/{dataset_id}/label-column")
 async def set_label_column(dataset_id: str, label_column: str = Query(...)):
     return dataset_manager.set_label_column(dataset_id, label_column)
+
+@app.post("/datasets/{dataset_id}/preprocess")
+async def preprocess_dataset(dataset_id: str, operations: list[dict]):
+    try:
+        pipeline = PreprocessingPipeline(dataset_id, dataset_manager)
+        result = pipeline.execute(operations)
+        
+        if result.success:
+            return {
+                "valid": True,
+                "message": result.message,
+                "affected_samples": result.affected_samples,
+                "affected_columns": result.affected_columns,
+                "new_dataset_id": result.new_dataset_id
+            }
+        else:
+            return {
+                "valid": False,
+                "errors": result.errors
+            }
+    except Exception as e:
+        return {
+            "valid": False,
+            "errors": [str(e)]
+        }
 
 @app.post("/train/dataset")
 async def train_with_dataset(config: TrainWithDatasetConfig):

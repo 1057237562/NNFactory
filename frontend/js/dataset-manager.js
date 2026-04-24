@@ -60,6 +60,10 @@ class DatasetManagerUI {
         document.querySelectorAll('.ds-tab').forEach(tab => {
             tab.addEventListener('click', (e) => {
                 this.currentView = e.target.dataset.view;
+                if (this.currentView === 'overview') {
+                    this.currentView = 'preview';
+                    e.target.dataset.view = 'preview';
+                }
                 document.querySelectorAll('.ds-tab').forEach(t => t.classList.remove('active'));
                 e.target.classList.add('active');
                 document.querySelectorAll('.ds-panel').forEach(p => p.classList.remove('active'));
@@ -207,11 +211,11 @@ class DatasetManagerUI {
         `;
 
         this.renderOverview(ds);
-        this.currentView = 'overview';
+        this.currentView = 'preview';
         document.querySelectorAll('.ds-tab').forEach(t => t.classList.remove('active'));
-        document.querySelector('.ds-tab[data-view="overview"]').classList.add('active');
+        document.querySelector('.ds-tab[data-view="preview"]').classList.add('active');
         document.querySelectorAll('.ds-panel').forEach(p => p.classList.remove('active'));
-        document.getElementById('dsPanelOverview').classList.add('active');
+        document.getElementById('dsPanelPreview').classList.add('active');
     }
 
     renderOverview(ds) {
@@ -1184,31 +1188,56 @@ class DatasetManagerUI {
         modal.style.display = 'flex';
         modal.style.alignItems = 'center';
         modal.style.justifyContent = 'center';
-        content.innerHTML = '<div class="ds-loading">Executing...</div>';
+        content.innerHTML = '<div class="ds-loading">Executing preprocessing pipeline...</div>';
 
-        const log = [];
-        let affected = 0, completed = 0, errors = 0;
-
-        for (const node of this.ppNodes) {
-            try {
-                const result = await this.execNode(node, ds);
-                log.push({ type: 'success', message: `[${node.label}] ${result.message}` });
-                affected += result.affected || 0;
-                completed++;
-            } catch (e) { log.push({ type: 'error', message: `[${node.label}] ${e.message}` }); errors++; }
+        try {
+            const res = await fetch(`${DS_API}/datasets/${ds.id}/preprocess`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(this.ppNodes)
+            });
+            
+            const r = await res.json();
+            
+            if (r.valid) {
+                const newId = r.new_dataset_id;
+                let h = `<div class="pp-result-summary">
+                    <div class="pp-result-item"><span class="pp-result-value">${this.ppNodes.length}</span><span class="pp-result-label">Operations</span></div>
+                    <div class="pp-result-item"><span class="pp-result-value">0</span><span class="pp-result-label">Errors</span></div>
+                    <div class="pp-result-item"><span class="pp-result-value">${r.affected_samples.toLocaleString()}</span><span class="pp-result-label">Affected Samples</span></div>
+                    <div class="pp-result-item"><span class="pp-result-value">${this.ppNodes.length}</span><span class="pp-result-label">Total Ops</span></div>
+                </div><div class="pp-log">`;
+                h += `<div class="pp-log-entry success">${r.message}</div>`;
+                h += `</div><div class="pp-result-new-dataset">`;
+                h += `<p>New dataset ID: <strong>${newId}</strong></p>`;
+                h += `<button id="ppViewNewBtn" class="btn btn-primary">View Preprocessed Dataset</button>`;
+                h += '</div>';
+                content.innerHTML = h;
+                
+                document.getElementById('ppViewNewBtn').addEventListener('click', () => {
+                    this.selectedId = newId;
+                    modal.style.display = 'none';
+                    this.loadDatasets();
+                    this.selectDataset(newId);
+                });
+            } else {
+                let h = `<div class="pp-result-summary">
+                    <div class="pp-result-item"><span class="pp-result-value">0</span><span class="pp-result-label">Completed</span></div>
+                    <div class="pp-result-item"><span class="pp-result-value">${this.ppNodes.length}</span><span class="pp-result-label">Errors</span></div>
+                </div><div class="pp-log">`;
+                h += `<div class="pp-log-entry error">Preprocessing failed: ${r.errors.join(', ')}</div>`;
+                h += '</div>';
+                content.innerHTML = h;
+            }
+        } catch (e) {
+            let h = `<div class="pp-result-summary">
+                <div class="pp-result-item"><span class="pp-result-value">0</span><span class="pp-result-label">Completed</span></div>
+                <div class="pp-result-item"><span class="pp-result-value">1</span><span class="pp-result-label">Errors</span></div>
+            </div><div class="pp-log">`;
+            h += `<div class="pp-log-entry error">Backend error: ${e.message}</div>`;
+            h += '</div>';
+            content.innerHTML = h;
         }
-
-        let h = `<div class="pp-result-summary">
-            <div class="pp-result-item"><span class="pp-result-value">${completed}</span><span class="pp-result-label">Completed</span></div>
-            <div class="pp-result-item"><span class="pp-result-value">${errors}</span><span class="pp-result-label">Errors</span></div>
-            <div class="pp-result-item"><span class="pp-result-value">${affected.toLocaleString()}</span><span class="pp-result-label">Affected</span></div>
-            <div class="pp-result-item"><span class="pp-result-value">${this.ppNodes.length}</span><span class="pp-result-label">Total Ops</span></div>
-        </div><div class="pp-log">`;
-        log.forEach(e => { h += `<div class="pp-log-entry ${e.type}">${e.message}</div>`; });
-        h += '</div>';
-        content.innerHTML = h;
-        await this.loadDatasets();
-        if (this.selectedId) { const u = this.datasets.find(d => d.id === this.selectedId); if (u) this.renderOverview(u); }
     }
 
     async execNode(node, ds) {
@@ -1219,20 +1248,8 @@ class DatasetManagerUI {
                 if (r.valid) { this.selectedId = null; document.getElementById('dsWelcome').style.display = ''; document.getElementById('dsView').style.display = 'none'; return { message: 'All data purged', affected: ds.num_samples }; }
                 throw new Error(r.errors?.join(', ') || 'Failed');
             }
-            case 'filter_class': return { message: `Filter: ${node.params.mode} [${node.params.classes || 'all'}]`, affected: Math.floor(ds.num_samples * 0.1) };
-            case 'remove_samples': return { message: `Removed ${node.params.count} (${node.params.strategy})`, affected: node.params.count };
-            case 'split': return { message: `Split: train=${node.params.train_ratio}, val=${node.params.val_ratio}`, affected: 0 };
-            case 'balance': return { message: `Balanced via ${node.params.method}`, affected: Math.floor(ds.num_samples * 0.2) };
-            case 'normalize': return { message: `Normalized via ${node.params.method}`, affected: ds.num_samples };
-            case 'resize': return { message: `Resized to ${node.params.width}x${node.params.height}`, affected: ds.num_samples };
-            case 'one_hot': return { message: `One-hot encoded [${node.params.columns || 'auto'}]${node.params.drop_first ? ' (drop_first)' : ''}`, affected: ds.num_samples };
-            case 'label_encode': return { message: `Label encoded [${node.params.columns || 'auto'}]`, affected: ds.num_samples };
-            case 'ordinal_encode': return { message: `Ordinal encoded [${node.params.columns || 'auto'}]`, affected: ds.num_samples };
-            case 'target_encode': return { message: `Target encoded [${node.params.columns || 'auto'}] on ${node.params.label_col || '?'}`, affected: ds.num_samples };
-            case 'frequency_encode': return { message: `Frequency encoded [${node.params.columns || 'auto'}]`, affected: ds.num_samples };
-            case 'binary_encode': return { message: `Binary encoded [${node.params.columns || 'auto'}]`, affected: ds.num_samples };
-            case 'hash_encode': return { message: `Hash encoded [${node.params.columns || 'auto'}] into ${node.params.n_components} bins`, affected: ds.num_samples };
-            default: throw new Error(`Unknown: ${node.type}`);
+            default:
+                throw new Error(`Node ${node.type} must be executed via backend pipeline`);
         }
     }
 

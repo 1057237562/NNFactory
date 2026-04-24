@@ -217,12 +217,12 @@ class NodeManager {
         ctx.roundRect(x, y, w, h, 8);
         ctx.fill();
         ctx.stroke();
-        
+
         ctx.shadowColor = 'transparent';
         ctx.shadowBlur = 0;
         ctx.fillStyle = headerColor;
         ctx.beginPath();
-        ctx.roundRect(x, y, w, this.headerHeight, 8);
+        ctx.roundRect(x, y, w, this.headerHeight, [8, 8, 0, 0]);
         ctx.fill();
         
         ctx.fillStyle = '#ffffff';
@@ -237,11 +237,11 @@ class NodeManager {
             ctx.fillText(paramSummary, x + w / 2, y + this.headerHeight + h / 2);
         }
         
-        const inputPortX = x;
+        const inputPortX = x + this.portRadius;
         const inputPortY = y + h / 2;
         this.renderPort(ctx, inputPortX, inputPortY, 'input', headerColor, isSelected);
-        
-        const outputPortX = x + w;
+
+        const outputPortX = x + w - this.portRadius;
         this.renderPort(ctx, outputPortX, inputPortY, 'output', headerColor, isSelected);
         
         ctx.restore();
@@ -279,9 +279,9 @@ class NodeManager {
         if (!node) return { x: 0, y: 0 };
         
         if (portType === 'input') {
-            return { x: node.x, y: node.y + node.height / 2 };
+            return { x: node.x + this.portRadius, y: node.y + node.height / 2 };
         } else {
-            return { x: node.x + node.width, y: node.y + node.height / 2 };
+            return { x: node.x + node.width - this.portRadius, y: node.y + node.height / 2 };
         }
     }
     
