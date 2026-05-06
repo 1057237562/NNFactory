@@ -8,51 +8,9 @@ class NodeManager {
         this.dragOffsetY = 0;
         this.nodeIdCounter = 0;
         
-        this.layerCategories = {
-            conv2d: 'conv', conv1d: 'conv', convtranspose2d: 'conv',
-            maxpool2d: 'pool', avgpool2d: 'pool', adaptive_avgpool2d: 'pool',
-            linear: 'linear', embedding: 'linear',
-            batchnorm2d: 'norm', batchnorm1d: 'norm', layernorm: 'norm', groupnorm: 'norm',
-            relu: 'activation', leakyrelu: 'activation', gelu: 'activation',
-            sigmoid: 'activation', tanh: 'activation', softmax: 'activation', silu: 'activation',
-            multiheadattention: 'transformer', transformerencoderlayer: 'transformer',
-            lstm: 'rnn', gru: 'rnn',
-            dropout: 'regularization', dropout2d: 'regularization',
-            input: 'utility', flatten: 'utility', upsample: 'utility', pixelshuffle: 'utility', output: 'utility'
-        };
+        this.layerCategories = window.LayerUtils.LAYER_CATEGORIES;
         
-        this.layerDefaults = {
-            conv2d: { in_channels: 3, out_channels: 64, kernel_size: 3, stride: 1, padding: 1 },
-            conv1d: { in_channels: 64, out_channels: 128, kernel_size: 3, stride: 1, padding: 1 },
-            convtranspose2d: { in_channels: 64, out_channels: 32, kernel_size: 3, stride: 2, padding: 1, output_padding: 1 },
-            maxpool2d: { kernel_size: 2, stride: 2, padding: 0 },
-            avgpool2d: { kernel_size: 2, stride: 2 },
-            adaptive_avgpool2d: { output_size: 1 },
-            linear: { in_features: 512, out_features: 10 },
-            embedding: { num_embeddings: 1000, embedding_dim: 128 },
-            batchnorm2d: { num_features: 64 },
-            batchnorm1d: { num_features: 128 },
-            layernorm: { normalized_shape: 128 },
-            groupnorm: { num_groups: 32, num_channels: 64 },
-            relu: {},
-            leakyrelu: { negative_slope: 0.01 },
-            gelu: {},
-            sigmoid: {},
-            tanh: {},
-            softmax: { dim: -1 },
-            silu: {},
-            multiheadattention: { embed_dim: 128, num_heads: 8, dropout: 0.1 },
-            transformerencoderlayer: { d_model: 128, nhead: 8, dim_feedforward: 512, dropout: 0.1, activation: 'relu' },
-            lstm: { input_size: 128, hidden_size: 256, num_layers: 1, dropout: 0.0, bidirectional: false },
-            gru: { input_size: 128, hidden_size: 256, num_layers: 1, dropout: 0.0, bidirectional: false },
-            dropout: { p: 0.5 },
-            dropout2d: { p: 0.5 },
-            flatten: {},
-            upsample: { scale_factor: 2, mode: 'nearest' },
-            pixelshuffle: { upscale_factor: 2 },
-            input: {},
-            output: {}
-        };
+        this.layerDefaults = window.LayerConfig.LAYER_DEFAULTS;
         
         this.nodeWidth = 160;
         this.nodeHeight = 70;
@@ -139,19 +97,7 @@ class NodeManager {
     }
     
     getDisplayName(type) {
-        const names = {
-            conv2d: 'Conv2d', conv1d: 'Conv1d', convtranspose2d: 'ConvTranspose2d',
-            maxpool2d: 'MaxPool2d', avgpool2d: 'AvgPool2d', adaptive_avgpool2d: 'AdaptiveAvgPool2d',
-            linear: 'Linear', embedding: 'Embedding',
-            batchnorm2d: 'BatchNorm2d', batchnorm1d: 'BatchNorm1d', layernorm: 'LayerNorm', groupnorm: 'GroupNorm',
-            relu: 'ReLU', leakyrelu: 'LeakyReLU', gelu: 'GELU',
-            sigmoid: 'Sigmoid', tanh: 'Tanh', softmax: 'Softmax', silu: 'SiLU',
-            multiheadattention: 'MultiheadAttention', transformerencoderlayer: 'TransformerEncLayer',
-            lstm: 'LSTM', gru: 'GRU',
-            dropout: 'Dropout', dropout2d: 'Dropout2d',
-            input: 'Input', flatten: 'Flatten', upsample: 'Upsample', pixelshuffle: 'PixelShuffle', output: 'Output'
-        };
-        return names[type] || type;
+        return window.LayerUtils.getLayerDisplayName(type);
     }
     
     getParamSummary(node) {
@@ -174,18 +120,7 @@ class NodeManager {
     }
     
     getNodeColor(category) {
-        const colors = {
-            conv: '#3b82f6',
-            pool: '#22c55e',
-            linear: '#a855f7',
-            norm: '#f97316',
-            activation: '#ec4899',
-            transformer: '#06b6d4',
-            rnn: '#8b5cf6',
-            regularization: '#64748b',
-            utility: '#94a3b8'
-        };
-        return colors[category] || '#94a3b8';
+        return window.LayerUtils.getLayerCategoryColor(category);
     }
     
     renderNode(ctx, node) {
