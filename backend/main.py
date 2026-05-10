@@ -123,9 +123,18 @@ async def train_model(config: TrainConfig):
         "device": config.blueprint.device
     }
 
-    def event_stream():
-        for event in engine.train(train_config):
-            yield f"data: {json.dumps(event)}\n\n"
+    async def event_stream():
+        loop = asyncio.get_event_loop()
+        iterator = iter(engine.train(train_config))
+        try:
+            while True:
+                try:
+                    event = await loop.run_in_executor(executor, next, iterator)
+                    yield f"data: {json.dumps(event)}\n\n"
+                except StopIteration:
+                    break
+        finally:
+            training_engines.pop(train_id, None)
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
@@ -298,9 +307,18 @@ async def train_with_dataset(config: TrainWithDatasetConfig):
         "device": config.blueprint.device,
     }
 
-    def event_stream():
-        for event in engine.train(train_config):
-            yield f"data: {json.dumps(event)}\n\n"
+    async def event_stream():
+        loop = asyncio.get_event_loop()
+        iterator = iter(engine.train(train_config))
+        try:
+            while True:
+                try:
+                    event = await loop.run_in_executor(executor, next, iterator)
+                    yield f"data: {json.dumps(event)}\n\n"
+                except StopIteration:
+                    break
+        finally:
+            training_engines.pop(train_id, None)
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
