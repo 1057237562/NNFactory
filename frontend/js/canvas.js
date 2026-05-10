@@ -166,6 +166,7 @@ class CanvasManager {
         
         if (window.app && window.app.nodeManager) {
             this.drawNodes();
+            this.drawSelectionBox();
         }
         
         this.ctx.restore();
@@ -253,6 +254,27 @@ class CanvasManager {
             
             ctx.restore();
         }
+    }
+    
+    drawSelectionBox() {
+        const nodeManager = window.app.nodeManager;
+        if (!nodeManager.boxSelectActive) return;
+        
+        const x = Math.min(nodeManager.boxStartX, nodeManager.boxEndX);
+        const y = Math.min(nodeManager.boxStartY, nodeManager.boxEndY);
+        const w = Math.abs(nodeManager.boxEndX - nodeManager.boxStartX);
+        const h = Math.abs(nodeManager.boxEndY - nodeManager.boxStartY);
+        
+        this.ctx.save();
+        this.ctx.fillStyle = 'rgba(99, 102, 241, 0.08)';
+        this.ctx.strokeStyle = '#6366f1';
+        this.ctx.lineWidth = 1.5;
+        this.ctx.setLineDash([5, 5]);
+        this.ctx.beginPath();
+        this.ctx.rect(x, y, w, h);
+        this.ctx.fill();
+        this.ctx.stroke();
+        this.ctx.restore();
     }
     
     getTransform() {

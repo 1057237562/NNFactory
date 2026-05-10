@@ -105,7 +105,11 @@ class App {
                     this.canvas.render();
                     return;
                 }
-                if (this.nodeManager.selectedNode) {
+                if (this.nodeManager.selectedNodes && this.nodeManager.selectedNodes.size > 0) {
+                    e.preventDefault();
+                    this.nodeManager.deleteSelectedNodes();
+                    this.propertiesPanel.hide();
+                } else if (this.nodeManager.selectedNode) {
                     this.nodeManager.deleteNode(this.nodeManager.selectedNode.id);
                     this.propertiesPanel.hide();
                 }

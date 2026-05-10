@@ -3,10 +3,17 @@ class NodeManager {
         this.canvas = canvas;
         this.nodes = new Map();
         this.selectedNode = null;
+        this.selectedNodes = new Set();
         this.draggingNode = null;
         this.dragOffsetX = 0;
         this.dragOffsetY = 0;
         this.nodeIdCounter = 0;
+        
+        this.boxSelectActive = false;
+        this.boxStartX = 0;
+        this.boxStartY = 0;
+        this.boxEndX = 0;
+        this.boxEndY = 0;
         
         this.layerCategories = window.LayerUtils.LAYER_CATEGORIES;
         
@@ -134,7 +141,7 @@ class NodeManager {
         const displayName = this.getDisplayName(node.type);
         const paramSummary = this.getParamSummary(node);
         
-        const isSelected = this.selectedNode === node;
+        const isSelected = this.selectedNodes.has(node);
         const isDragging = this.draggingNode === node;
         
         ctx.save();
@@ -273,8 +280,13 @@ class NodeManager {
             this.selectNode(clickedNode);
             this.canvas.render();
         } else {
+            // Start box selection on empty space
             this.deselectAll();
-            this.canvas.render();
+            this.boxSelectActive = true;
+            this.boxStartX = worldPos.x;
+            this.boxStartY = worldPos.y;
+            this.boxEndX = worldPos.x;
+            this.boxEndY = worldPos.y;
         }
     }
     
@@ -298,6 +310,12 @@ class NodeManager {
             this.tempConnection.endY = worldPos.y;
             this.canvas.render();
         }
+        
+        if (this.boxSelectActive) {
+            this.boxEndX = worldPos.x;
+            this.boxEndY = worldPos.y;
+            this.canvas.render();
+        }
     }
     
     onCanvasMouseUp(e) {
@@ -306,6 +324,52 @@ class NodeManager {
             e.clientX - rect.left,
             e.clientY - rect.top
         );
+        
+        // Handle box selection completion
+        if (this.boxSelectActive) {
+            this.boxSelectActive = false;
+            
+            const minX = Math.min(this.boxStartX, this.boxEndX);
+            const minY = Math.min(this.boxStartY, this.boxEndY);
+            const maxX = Math.max(this.boxStartX, this.boxEndX);
+            const maxY = Math.max(this.boxStartY, this.boxEndY);
+            
+            const boxWidth = maxX - minX;
+            const boxHeight = maxY - minY;
+            
+            // Only select if the box is big enough (avoid accidental micro-drags)
+            if (boxWidth > 5 || boxHeight > 5) {
+                this.selectedNodes.clear();
+                
+                for (const node of this.nodes.values()) {
+                    // Check AABB intersection between node and selection box
+                    if (node.x < maxX && node.x + node.width > minX &&
+                        node.y < maxY && node.y + node.height > minY) {
+                        this.selectedNodes.add(node);
+                    }
+                }
+                
+                if (this.selectedNodes.size > 0) {
+                    this.selectedNode = this.selectedNodes.values().next().value;
+                    if (window.app && window.app.propertiesPanel) {
+                        window.app.propertiesPanel.show(this.selectedNode);
+                    }
+                } else {
+                    this.selectedNode = null;
+                    if (window.app && window.app.propertiesPanel) {
+                        window.app.propertiesPanel.hide();
+                    }
+                }
+            }
+            
+            
+            this.canvas.render();
+            this.boxStartX = 0;
+            this.boxStartY = 0;
+            this.boxEndX = 0;
+            this.boxEndY = 0;
+            return;
+        }
         
         const clickDistance = Math.sqrt(
             Math.pow(worldPos.x - this.clickStartX, 2) + 
@@ -390,6 +454,8 @@ class NodeManager {
         }
         
         this.selectedNode = node;
+        this.selectedNodes.clear();
+        this.selectedNodes.add(node);
         
         if (window.app && window.app.propertiesPanel) {
             window.app.propertiesPanel.show(node);
@@ -399,8 +465,9 @@ class NodeManager {
     }
     
     deselectAll() {
-        if (this.selectedNode) {
+        if (this.selectedNode || this.selectedNodes.size > 0) {
             this.selectedNode = null;
+            this.selectedNodes.clear();
             if (window.app && window.app.propertiesPanel) {
                 window.app.propertiesPanel.hide();
             }
@@ -416,6 +483,7 @@ class NodeManager {
             if (this.selectedNode && this.selectedNode.id === nodeId) {
                 this.selectedNode = null;
             }
+            this.selectedNodes.delete(node);
             
             if (window.app && window.app.connectionManager) {
                 window.app.connectionManager.removeConnectionsForNode(nodeId);
@@ -428,6 +496,18 @@ class NodeManager {
             }
             
             this.canvas.render();
+        }
+    }
+    
+    deleteSelectedNodes() {
+        const nodesToDelete = Array.from(this.selectedNodes);
+        for (const node of nodesToDelete) {
+            this.deleteNode(node.id);
+        }
+        this.selectedNodes.clear();
+        this.selectedNode = null;
+        if (window.app && window.app.propertiesPanel) {
+            window.app.propertiesPanel.hide();
         }
     }
     
@@ -455,6 +535,7 @@ class NodeManager {
     clear() {
         this.nodes.clear();
         this.selectedNode = null;
+        this.selectedNodes.clear();
         this.updateCounts();
         
         if (window.app && window.app.onNodesChanged) {
