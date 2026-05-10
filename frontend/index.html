@@ -104,6 +104,39 @@
             </div>
         </header>
 
+        <!-- Training Status Bar — persistent when training runs in background -->
+        <div class="train-status-bar" id="trainStatusBar" style="display:none;">
+            <div class="train-status-left">
+                <div class="train-status-icon" id="trainStatusIcon">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.5" fill="none" opacity="0.3"/>
+                        <path d="M7 1a6 6 0 016 6" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                </div>
+                <span class="train-status-label" id="trainStatusText">Training...</span>
+                <span class="train-status-sep">·</span>
+                <span class="train-status-epoch" id="trainStatusEpoch">Epoch 0/0</span>
+            </div>
+            <div class="train-status-center">
+                <div class="train-status-track">
+                    <div class="train-status-progress" id="trainStatusProgress"></div>
+                </div>
+            </div>
+            <div class="train-status-right">
+                <span class="train-status-time" id="trainStatusTime">0:00</span>
+                <button class="train-status-btn train-status-stop" id="trainStatusStopBtn" title="Stop Training">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                        <rect x="1.5" y="1.5" width="9" height="9" rx="1.5"/>
+                    </svg>
+                </button>
+                <button class="train-status-btn train-status-dismiss" id="trainStatusDismiss" title="Dismiss">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                        <path d="M2.7 2.7a.5.5 0 01.7 0L6 5.3l2.6-2.6a.5.5 0 01.7.7L6.7 6l2.6 2.6a.5.5 0 01-.7.7L6 6.7 3.4 9.3a.5.5 0 01-.7-.7L5.3 6 2.7 3.4a.5.5 0 010-.7z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
         <div class="main-content">
             <aside class="sidebar" id="sidebar">
                 <div class="sidebar-section">

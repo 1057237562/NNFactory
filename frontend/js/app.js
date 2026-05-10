@@ -7,6 +7,10 @@ class App {
         this.codeGenerator = new CodeGenerator();
         this.datasetManager = new DatasetManagerUI();
         this.datasetManager.init();
+
+        this._trainingActive = false;
+        this._trainingState = null; // 'running' | 'complete' | 'error' | null
+        this._trainingCompleted = false;
         
         window.app = this;
         
@@ -62,6 +66,7 @@ class App {
     init() {
         this.setupEventListeners();
         this.setupCategoryToggles();
+        this.setupTrainingStatusBar();
         this.renderConnections();
     }
     
@@ -339,11 +344,15 @@ class App {
     }
     
     openTrainModal() {
-        if (this.nodeManager.getNodesArray().length === 0) {
+        if (this.nodeManager.getNodesArray().length === 0 && !this._trainingActive && !this._trainingCompleted) {
             this.showToast('Add layers to the canvas first!', 'warning');
             return;
         }
-        this.resetTrainModal();
+        if (this._trainingActive || this._trainingCompleted) {
+            this.restoreTrainModal();
+        } else {
+            this.resetTrainModal();
+        }
         this.populateDatasetSelector();
         document.getElementById('trainModal').classList.add('active');
     }
@@ -377,8 +386,79 @@ class App {
     
     closeTrainModal() {
         document.getElementById('trainModal').classList.remove('active');
+        if (this._trainingActive && this._trainingState === 'running') {
+            this.showTrainingStatusBar();
+        }
     }
-    
+
+    setupTrainingStatusBar() {
+        const bar = document.getElementById('trainStatusBar');
+        bar.addEventListener('click', (e) => {
+            if (e.target.closest('.train-status-btn')) return;
+            this.restoreTrainModal();
+            document.getElementById('trainModal').classList.add('active');
+        });
+        document.getElementById('trainStatusStopBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.stopTraining();
+        });
+        document.getElementById('trainStatusDismiss').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.hideTrainingStatusBar();
+        });
+    }
+
+    showTrainingStatusBar() {
+        const bar = document.getElementById('trainStatusBar');
+        bar.className = 'train-status-bar active';
+        bar.style.display = '';
+    }
+
+    hideTrainingStatusBar() {
+        document.getElementById('trainStatusBar').style.display = 'none';
+    }
+
+    updateTrainingStatusBar(event) {
+        if (event.type === 'progress' || event.type === 'epoch_end') {
+            document.getElementById('trainStatusEpoch').textContent =
+                `Epoch ${event.epoch}/${event.total_epochs}`;
+            document.getElementById('trainStatusTime').textContent = this.formatTime(event.elapsed);
+            const pct = event.progress !== undefined
+                ? event.progress
+                : (event.epoch / event.total_epochs) * 100;
+            document.getElementById('trainStatusProgress').style.width = pct + '%';
+        }
+        if (event.type === 'complete') {
+            const bar = document.getElementById('trainStatusBar');
+            bar.className = 'train-status-bar complete';
+            document.getElementById('trainStatusIcon').innerHTML =
+                '<svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">' +
+                '<path d="M7 0a7 7 0 100 14A7 7 0 007 0zm3.29 4.29a.5.5 0 01.71.71l-4.5 4.5a.5.5 0 01-.71 0l-2.5-2.5a.5.5 0 01.71-.71L6 8.29l3.79-3.8a.5.5 0 01.5-.2z"/></svg>';
+            document.getElementById('trainStatusText').textContent = 'Training Complete';
+            document.getElementById('trainStatusStopBtn').style.display = 'none';
+        }
+        if (event.type === 'error') {
+            const bar = document.getElementById('trainStatusBar');
+            bar.className = 'train-status-bar error';
+            document.getElementById('trainStatusIcon').innerHTML =
+                '<svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">' +
+                '<path d="M7 0a7 7 0 100 14A7 7 0 007 0zm3.54 10.46a.5.5 0 01-.71.71L7 8.21l-2.83 2.83a.5.5 0 01-.71-.71L6.29 7.5 3.46 4.67a.5.5 0 01.71-.71L7 6.79l2.83-2.83a.5.5 0 01.71.71L7.71 7.5l2.83 2.83z"/></svg>';
+            document.getElementById('trainStatusText').textContent = 'Training Failed';
+            document.getElementById('trainStatusStopBtn').style.display = 'none';
+        }
+    }
+
+    restoreTrainModal() {
+        document.getElementById('trainConfig').style.display =
+            (this._trainingActive || this._trainingCompleted) ? 'none' : '';
+        document.getElementById('trainProgress').style.display =
+            (this._trainingState === 'running') ? '' : 'none';
+        document.getElementById('trainResults').style.display =
+            (this._trainingState === 'complete') ? '' : 'none';
+        document.getElementById('stopTrainingBtn').style.display =
+            (this._trainingState === 'running') ? '' : 'none';
+    }
+
     resetTrainModal() {
         document.getElementById('trainConfig').style.display = '';
         document.getElementById('trainProgress').style.display = 'none';
@@ -388,6 +468,7 @@ class App {
         this._trainHistory = null;
         this._trainChart = null;
         this._weightsFilename = null;
+        this.hideTrainingStatusBar();
     }
     
     async startTraining() {
@@ -437,6 +518,10 @@ class App {
         this._trainHistory = { train_loss: [], val_loss: [], train_acc: [], val_acc: [] };
         this._trainChart = new TrainingChart('trainChart');
         this._trainLog = [];
+
+        this._trainingActive = true;
+        this._trainingState = 'running';
+        this._trainingCompleted = false;
         
         try {
             const response = await fetch(url, {
@@ -464,8 +549,11 @@ class App {
                 }
             }
         } catch (error) {
+            this._trainingActive = false;
+            this._trainingState = 'error';
             this.showToast('Training failed: ' + error.message, 'error');
             this.resetTrainModal();
+            this.hideTrainingStatusBar();
         }
     }
     
@@ -474,6 +562,10 @@ class App {
             await fetch('http://localhost:8000/train/stop', { method: 'POST' });
             this.showToast('Training stopped', 'info');
         } catch (e) {}
+        this._trainingActive = false;
+        this._trainingState = null;
+        this._trainingCompleted = false;
+        this.hideTrainingStatusBar();
     }
     
     handleTrainEvent(event) {
@@ -490,6 +582,7 @@ class App {
             document.getElementById('trainProgressBar').style.width = event.progress + '%';
             document.getElementById('metricTrainLoss').textContent = event.train_loss.toFixed(4);
             document.getElementById('metricTrainAcc').textContent = event.train_acc.toFixed(1) + '%';
+            this.updateTrainingStatusBar(event);
         }
         
         if (event.type === 'epoch_end') {
@@ -505,9 +598,13 @@ class App {
             this._trainChart.update(this._trainHistory);
             
             this.addTrainLog(`Epoch ${event.epoch}/${event.total_epochs} | Loss: ${event.train_loss.toFixed(4)} | Val Loss: ${event.val_loss.toFixed(4)} | Acc: ${event.train_acc.toFixed(1)}% | Val Acc: ${event.val_acc.toFixed(1)}%`);
+            this.updateTrainingStatusBar(event);
         }
         
         if (event.type === 'complete') {
+            this._trainingActive = false;
+            this._trainingState = 'complete';
+            this._trainingCompleted = true;
             document.getElementById('stopTrainingBtn').style.display = 'none';
             document.getElementById('trainProgress').style.display = 'none';
             document.getElementById('trainResults').style.display = '';
@@ -518,13 +615,17 @@ class App {
             document.getElementById('resultParams').textContent = event.total_params.toLocaleString();
             document.getElementById('resultTime').textContent = this.formatTime(event.total_time);
             this._weightsFilename = event.weights_path || null;
+            this.updateTrainingStatusBar(event);
             this.showToast('Training complete!', 'success');
         }
         
         if (event.type === 'error') {
+            this._trainingActive = false;
+            this._trainingState = 'error';
             document.getElementById('stopTrainingBtn').style.display = 'none';
             this.showToast(event.message, 'error');
             this.addTrainLog(`ERROR: ${event.message}`);
+            this.updateTrainingStatusBar(event);
         }
     }
     
