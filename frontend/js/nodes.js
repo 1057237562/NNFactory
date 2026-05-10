@@ -15,6 +15,8 @@ class NodeManager {
         this.boxEndX = 0;
         this.boxEndY = 0;
         
+        this.dragGroupInitialPositions = null;
+        
         this.layerCategories = window.LayerUtils.LAYER_CATEGORIES;
         
         this.layerDefaults = window.LayerConfig.LAYER_DEFAULTS;
@@ -277,7 +279,17 @@ class NodeManager {
             this.dragOffsetX = worldPos.x - clickedNode.x;
             this.dragOffsetY = worldPos.y - clickedNode.y;
             
-            this.selectNode(clickedNode);
+            // If clicking a node already in multi-selection, drag all selected together
+            if (this.selectedNodes.has(clickedNode) && this.selectedNodes.size > 1) {
+                this.dragGroupInitialPositions = new Map();
+                for (const node of this.selectedNodes) {
+                    this.dragGroupInitialPositions.set(node.id, { x: node.x, y: node.y });
+                }
+            } else {
+                this.selectNode(clickedNode);
+                this.dragGroupInitialPositions = null;
+            }
+            
             this.canvas.render();
         } else {
             // Start box selection on empty space
@@ -302,6 +314,21 @@ class NodeManager {
             const newY = worldPos.y - this.dragOffsetY;
             this.draggingNode.x = newX;
             this.draggingNode.y = newY;
+            
+            // Move all other selected nodes by the same delta
+            if (this.dragGroupInitialPositions) {
+                const deltaX = this.draggingNode.x - this.dragGroupInitialPositions.get(this.draggingNode.id).x;
+                const deltaY = this.draggingNode.y - this.dragGroupInitialPositions.get(this.draggingNode.id).y;
+                for (const [nodeId, initPos] of this.dragGroupInitialPositions) {
+                    if (nodeId === this.draggingNode.id) continue;
+                    const node = this.nodes.get(nodeId);
+                    if (node) {
+                        node.x = initPos.x + deltaX;
+                        node.y = initPos.y + deltaY;
+                    }
+                }
+            }
+            
             this.canvas.render();
         }
         
@@ -378,8 +405,25 @@ class NodeManager {
         const clickDuration = Date.now() - this.clickStartTime;
         
         if (this.draggingNode) {
-            this.draggingNode.x = this.canvas.snapToGrid(this.draggingNode.x);
-            this.draggingNode.y = this.canvas.snapToGrid(this.draggingNode.y);
+            const snappedX = this.canvas.snapToGrid(this.draggingNode.x);
+            const snappedY = this.canvas.snapToGrid(this.draggingNode.y);
+            
+            if (this.dragGroupInitialPositions) {
+                const deltaX = snappedX - this.dragGroupInitialPositions.get(this.draggingNode.id).x;
+                const deltaY = snappedY - this.dragGroupInitialPositions.get(this.draggingNode.id).y;
+                for (const [nodeId, initPos] of this.dragGroupInitialPositions) {
+                    const node = this.nodes.get(nodeId);
+                    if (node) {
+                        node.x = initPos.x + deltaX;
+                        node.y = initPos.y + deltaY;
+                    }
+                }
+                this.dragGroupInitialPositions = null;
+            } else {
+                this.draggingNode.x = snappedX;
+                this.draggingNode.y = snappedY;
+            }
+            
             this.draggingNode = null;
             
             if (window.app && window.app.onNodesChanged) {
