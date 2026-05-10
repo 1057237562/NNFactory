@@ -522,12 +522,14 @@ class App {
         this._trainingActive = true;
         this._trainingState = 'running';
         this._trainingCompleted = false;
+        this._trainAbortController = new AbortController();
         
         try {
             const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(config)
+                body: JSON.stringify(config),
+                signal: this._trainAbortController.signal
             });
             
             const reader = response.body.getReader();
@@ -549,23 +551,31 @@ class App {
                 }
             }
         } catch (error) {
+            if (error.name === 'AbortError') {
+                return;
+            }
             this._trainingActive = false;
             this._trainingState = 'error';
             this.showToast('Training failed: ' + error.message, 'error');
             this.resetTrainModal();
             this.hideTrainingStatusBar();
+        } finally {
+            this._trainAbortController = null;
         }
     }
     
     async stopTraining() {
+        if (this._trainAbortController) {
+            this._trainAbortController.abort();
+        }
         try {
             await fetch('http://localhost:8000/train/stop', { method: 'POST' });
-            this.showToast('Training stopped', 'info');
         } catch (e) {}
         this._trainingActive = false;
         this._trainingState = null;
         this._trainingCompleted = false;
         this.hideTrainingStatusBar();
+        this.showToast('Training stopped', 'info');
     }
     
     handleTrainEvent(event) {
@@ -617,6 +627,33 @@ class App {
             this._weightsFilename = event.weights_path || null;
             this.updateTrainingStatusBar(event);
             this.showToast('Training complete!', 'success');
+        }
+
+        if (event.type === 'stopped') {
+            if (!this._trainingActive) return;
+            this._trainingActive = false;
+            this._trainingState = 'complete';
+            this._trainingCompleted = true;
+            document.getElementById('stopTrainingBtn').style.display = 'none';
+            document.getElementById('trainProgress').style.display = 'none';
+            document.getElementById('trainResults').style.display = '';
+            if (event.history && event.history.train_loss && event.history.train_loss.length > 0) {
+                const last = event.history.train_loss.length - 1;
+                document.getElementById('resultTrainLoss').textContent = event.history.train_loss[last].toFixed(4);
+                document.getElementById('resultValLoss').textContent = (event.history.val_loss[last] || 0).toFixed(4);
+                document.getElementById('resultTrainAcc').textContent = event.history.train_acc[last].toFixed(1) + '%';
+                document.getElementById('resultValAcc').textContent = (event.history.val_acc[last] || 0).toFixed(1) + '%';
+                this._trainHistory = event.history;
+                if (this._trainChart) this._trainChart.update(this._trainHistory);
+            } else {
+                document.getElementById('resultTrainLoss').textContent = '-';
+                document.getElementById('resultValLoss').textContent = '-';
+                document.getElementById('resultTrainAcc').textContent = '-';
+                document.getElementById('resultValAcc').textContent = '-';
+            }
+            document.getElementById('resultParams').textContent = '-';
+            document.getElementById('resultTime').textContent = this.formatTime(event.total_time || 0);
+            this._weightsFilename = null;
         }
         
         if (event.type === 'error') {

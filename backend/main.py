@@ -125,15 +125,17 @@ async def train_model(config: TrainConfig):
 
     async def event_stream():
         loop = asyncio.get_event_loop()
+        train_executor = ThreadPoolExecutor(max_workers=1)
         iterator = iter(engine.train(train_config))
         try:
             while True:
                 try:
-                    event = await loop.run_in_executor(executor, next, iterator)
+                    event = await loop.run_in_executor(train_executor, next, iterator)
                     yield f"data: {json.dumps(event)}\n\n"
                 except StopIteration:
                     break
         finally:
+            train_executor.shutdown(wait=False)
             training_engines.pop(train_id, None)
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
@@ -309,15 +311,17 @@ async def train_with_dataset(config: TrainWithDatasetConfig):
 
     async def event_stream():
         loop = asyncio.get_event_loop()
+        train_executor = ThreadPoolExecutor(max_workers=1)
         iterator = iter(engine.train(train_config))
         try:
             while True:
                 try:
-                    event = await loop.run_in_executor(executor, next, iterator)
+                    event = await loop.run_in_executor(train_executor, next, iterator)
                     yield f"data: {json.dumps(event)}\n\n"
                 except StopIteration:
                     break
         finally:
+            train_executor.shutdown(wait=False)
             training_engines.pop(train_id, None)
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")

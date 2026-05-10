@@ -1,5 +1,6 @@
 import importlib.util
 import os
+import threading
 import time
 import traceback
 from datetime import datetime
@@ -104,12 +105,12 @@ class ImageFolderWithTransform(torch.utils.data.Dataset[tuple[Any, ...]]):
 
 
 class TrainingEngine:
-    TEMP_DIR: str = os.path.join(os.path.dirname(__file__), "temp")
+    TEMP_DIR: str = os.path.join(os.path.dirname(os.path.dirname(__file__)), "temp")
 
     blueprint: Any
     code_generator: Any
     is_training: bool
-    should_stop: bool
+    _stop_event: threading.Event
     _temp_path: Optional[str]
     _weights_path: Optional[str]
 
@@ -117,7 +118,7 @@ class TrainingEngine:
         self.blueprint = blueprint
         self.code_generator = code_generator
         self.is_training = False
-        self.should_stop = False
+        self._stop_event = threading.Event()
         self._temp_path = None
         self._weights_path = None
         os.makedirs(self.TEMP_DIR, exist_ok=True)
@@ -282,7 +283,7 @@ class TrainingEngine:
 
     def train(self, config: dict[str, Any]) -> Generator[dict[str, Any], None, None]:
         self.is_training = True
-        self.should_stop = False
+        self._stop_event.clear()
 
         epoch: int = -1
         try:
@@ -291,11 +292,20 @@ class TrainingEngine:
             if device == "cuda" and not torch.cuda.is_available():
                 device = "cpu"
             device_obj = torch.device(device)
+            if self._stop_event.is_set():
+                yield {"type": "stopped", "message": "Training cancelled", "epochs_completed": 0}
+                return
             model: Any = self._build_model(device)
+            if self._stop_event.is_set():
+                yield {"type": "stopped", "message": "Training cancelled", "epochs_completed": 0}
+                return
             train_loader: Any
             val_loader: Any
             num_classes: int
             train_loader, val_loader, num_classes = self._create_dataset_from_config(config)
+            if self._stop_event.is_set():
+                yield {"type": "stopped", "message": "Training cancelled", "epochs_completed": 0}
+                return
             train_loader = DeviceDataLoader(train_loader, device)
             val_loader = DeviceDataLoader(val_loader, device)
             criterion = self._get_criterion(str(config.get("loss_function", "cross_entropy"))).to(device_obj)
@@ -328,8 +338,12 @@ class TrainingEngine:
                 "actual": device
             }
 
+            if self._stop_event.is_set():
+                yield {"type": "stopped", "message": "Training cancelled", "epochs_completed": 0, "total_epochs": epochs}
+                return
+
             for epoch in range(epochs):
-                if self.should_stop:
+                if self._stop_event.is_set():
                     break
 
                 epoch_loss: float
@@ -341,6 +355,9 @@ class TrainingEngine:
 
                 for evt in progress_events:
                     yield evt
+
+                if self._stop_event.is_set():
+                    break
 
                 val_loss, val_acc = self._evaluate_model(model, val_loader, criterion, device)
 
@@ -368,6 +385,17 @@ class TrainingEngine:
                     "elapsed": time.time() - start_time,
                     "history": history
                 }
+
+            if self._stop_event.is_set():
+                yield {
+                    "type": "stopped",
+                    "epochs_completed": epoch + 1,
+                    "total_epochs": epochs,
+                    "total_time": time.time() - start_time,
+                    "history": history,
+                    "message": "Training stopped by user"
+                }
+                return
 
             total_params: int = sum(p.numel() for p in model.parameters())
             trainable_params: int = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -417,7 +445,7 @@ class TrainingEngine:
         progress_events: list[dict[str, Any]] = []
 
         for batch_x, batch_y in train_loader:
-            if self.should_stop:
+            if self._stop_event.is_set():
                 break
 
             optimizer.zero_grad()
@@ -523,7 +551,7 @@ class TrainingEngine:
         ]
 
     def stop_training(self) -> None:
-        self.should_stop = True
+        self._stop_event.set()
 
     @staticmethod
     def _forward(model: Any, x: Any) -> torch.Tensor:
