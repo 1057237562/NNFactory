@@ -59,7 +59,20 @@ function getLayerCategoryColor(category) {
     return LAYER_CATEGORY_COLORS[category] || '#94a3b8';
 }
 
+function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
 // Export to global scope
+window.Utils = {
+    downloadBlob
+};
+
 window.LayerUtils = {
     LAYER_CATEGORIES,
     LAYER_DISPLAY_NAMES,

@@ -26,23 +26,7 @@ class App {
                 this.nodeManager.importNodes(blueprint.layers || []);
                 this.connectionManager.importConnections(blueprint.connections || []);
                 
-                if (blueprint.model_name) {
-                    const modelNameEl = document.getElementById('modelName');
-                    if (modelNameEl) modelNameEl.value = blueprint.model_name;
-                }
-                if (blueprint.use_jit !== undefined) {
-                    const jitEl = document.getElementById('useJit');
-                    if (jitEl) jitEl.checked = blueprint.use_jit;
-                }
-                if (blueprint.use_compile !== undefined) {
-                    const compileEl = document.getElementById('useCompile');
-                    if (compileEl) compileEl.checked = blueprint.use_compile;
-                }
-                if (blueprint.device !== undefined) {
-                    const deviceEl = document.getElementById('deviceSelect');
-                    if (deviceEl) deviceEl.value = blueprint.device;
-                }
-                
+                this._applyBlueprintFields(blueprint);
                 this.renderConnections();
                 // Trigger autosave only after both nodes and connections are fully imported
                 this.saveToLocalStorage();
@@ -165,6 +149,25 @@ class App {
         return active && (active.tagName === 'INPUT' || active.tagName === 'SELECT' || active.tagName === 'TEXTAREA');
     }
     
+    _applyBlueprintFields(blueprint) {
+        if (blueprint.model_name) {
+            const el = document.getElementById('modelName');
+            if (el) el.value = blueprint.model_name;
+        }
+        if (blueprint.use_jit !== undefined) {
+            const el = document.getElementById('useJit');
+            if (el) el.checked = blueprint.use_jit;
+        }
+        if (blueprint.use_compile !== undefined) {
+            const el = document.getElementById('useCompile');
+            if (el) el.checked = blueprint.use_compile;
+        }
+        if (blueprint.device !== undefined) {
+            const el = document.getElementById('deviceSelect');
+            if (el) el.value = blueprint.device;
+        }
+    }
+    
     getBlueprint() {
         return {
             layers: this.nodeManager.exportNodes(),
@@ -259,24 +262,14 @@ class App {
         const code = document.getElementById('generatedCode').textContent;
         const modelName = document.getElementById('modelName').value || 'NeuralNetwork';
         const blob = new Blob([code], { type: 'text/python' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${modelName.toLowerCase()}.py`;
-        a.click();
-        URL.revokeObjectURL(url);
+        window.Utils.downloadBlob(blob, `${modelName.toLowerCase()}.py`);
         this.showToast('Code downloaded!', 'success');
     }
     
     exportBlueprint() {
         const blueprint = this.getBlueprint();
         const blob = new Blob([JSON.stringify(blueprint, null, 2)], { type: 'application/octet-stream' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${blueprint.model_name.toLowerCase()}.nn`;
-        a.click();
-        URL.revokeObjectURL(url);
+        window.Utils.downloadBlob(blob, `${blueprint.model_name.toLowerCase()}.nn`);
         this.showToast('Blueprint saved!', 'success');
     }
     
@@ -292,19 +285,7 @@ class App {
                 this.nodeManager.importNodes(blueprint.layers);
                 this.connectionManager.importConnections(blueprint.connections);
                 
-                if (blueprint.model_name) {
-                    document.getElementById('modelName').value = blueprint.model_name;
-                }
-                if (blueprint.use_jit !== undefined) {
-                    document.getElementById('useJit').checked = blueprint.use_jit;
-                }
-                if (blueprint.use_compile !== undefined) {
-                    document.getElementById('useCompile').checked = blueprint.use_compile;
-                }
-                if (blueprint.device !== undefined) {
-                    document.getElementById('deviceSelect').value = blueprint.device;
-                }
-                
+                this._applyBlueprintFields(blueprint);
                 this.renderConnections();
                 this.showToast('Blueprint loaded!', 'success');
             } catch (error) {
@@ -696,12 +677,7 @@ class App {
                 throw new Error('Weights file not found on server');
             }
             const blob = await response.blob();
-            const downloadUrl = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = downloadUrl;
-            a.download = `${modelName.toLowerCase()}_weights.pth`;
-            a.click();
-            URL.revokeObjectURL(downloadUrl);
+            window.Utils.downloadBlob(blob, `${modelName.toLowerCase()}_weights.pth`);
             this.showToast('Weights exported successfully!', 'success');
         } catch (error) {
             this.showToast('Failed to export weights: ' + error.message, 'error');
@@ -781,12 +757,7 @@ class App {
                 throw new Error('Weights file not found');
             }
             const blob = await response.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            a.click();
-            URL.revokeObjectURL(url);
+            window.Utils.downloadBlob(blob, filename);
             this.showToast('Weights downloaded!', 'success');
         } catch (error) {
             this.showToast('Failed to download: ' + error.message, 'error');
