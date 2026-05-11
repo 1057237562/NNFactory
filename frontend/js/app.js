@@ -98,12 +98,9 @@ class App {
                 this.closeWeightsModal();
             }
             if ((e.key === 'Delete' || e.key === 'Backspace') && !this.isInputFocused()) {
-                if (this.connectionManager.selectedConnection !== null) {
+                if (this.connectionManager.selectedConnections.size > 0) {
                     e.preventDefault();
-                    this.connectionManager.removeConnection(this.connectionManager.selectedConnection);
-                    this.connectionManager.selectedConnection = null;
-                    this.canvas.render();
-                    return;
+                    this.connectionManager.removeSelectedConnections();
                 }
                 if (this.nodeManager.selectedNodes && this.nodeManager.selectedNodes.size > 0) {
                     e.preventDefault();

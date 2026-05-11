@@ -369,11 +369,15 @@ class NodeManager {
                 this.selectedNodes.clear();
                 
                 for (const node of this.nodes.values()) {
-                    // Check AABB intersection between node and selection box
                     if (node.x < maxX && node.x + node.width > minX &&
                         node.y < maxY && node.y + node.height > minY) {
                         this.selectedNodes.add(node);
                     }
+                }
+                
+                if (window.app && window.app.connectionManager) {
+                    window.app.connectionManager.deselectAll();
+                    window.app.connectionManager.selectConnectionsInBox(minX, minY, maxX, maxY);
                 }
                 
                 if (this.selectedNodes.size > 0) {

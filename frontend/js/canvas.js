@@ -205,8 +205,9 @@ class CanvasManager {
             const start = nodeManager.getPortPosition(conn.from_id, 'output');
             const end = nodeManager.getPortPosition(conn.to_id, 'input');
             
-            const isSelected = window.app.connectionManager.selectedConnection !== null &&
-                connections.indexOf(conn) === window.app.connectionManager.selectedConnection;
+            const isSelected = window.app.connectionManager.selectedConnections.has(
+                connections.indexOf(conn)
+            );
             
             ctx.save();
             ctx.strokeStyle = isSelected ? '#6366f1' : '#6366f1';
