@@ -55,9 +55,9 @@ from main import Blueprint, LayerConfig, Connection
 ### Frontend (Vanilla JS)
 ```bash
 # Start static file server
-cd frontend && python -m http.server 3000
+cd frontend && python -m http.server 4000
 
-# Access at http://localhost:3000
+# Access at http://localhost:4000
 ```
 
 ### One-Click Start (Windows)
@@ -68,7 +68,7 @@ start.bat
 ### Testing
 No formal test framework exists. Test manually:
 1. Start both servers (`start.bat`)
-2. Open http://localhost:3000
+2. Open http://localhost:4000
 3. Drag layers onto canvas, connect them, click "Generate Code"
 4. Verify generated Python code is syntactically valid
 

@@ -17,12 +17,12 @@ timeout /t 3 /nobreak >nul
 
 echo.
 echo [3/3] Starting frontend server...
-start "NNFactory Frontend" cmd /k "cd frontend && python -m http.server 3000"
+start "NNFactory Frontend" cmd /k "cd frontend && python -m http.server 4000"
 
 echo.
 echo ========================================
 echo   NNFactory is running!
-echo   Frontend: http://localhost:3000
+echo   Frontend: http://localhost:4000
 echo   Backend:  http://localhost:8000
 echo   API Docs: http://localhost:8000/docs
 echo ========================================
@@ -32,7 +32,7 @@ pause >nul
 
 echo Stopping servers...
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8000" ^| findstr "LISTENING"') do taskkill /PID %%a /T /F >nul 2>&1
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":3000" ^| findstr "LISTENING"') do taskkill /PID %%a /T /F >nul 2>&1
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":4000" ^| findstr "LISTENING"') do taskkill /PID %%a /T /F >nul 2>&1
 taskkill /FI "WindowTitle eq NNFactory Backend" /T /F >nul 2>&1
 taskkill /FI "WindowTitle eq NNFactory Frontend" /T /F >nul 2>&1
 

@@ -34,10 +34,10 @@ uvicorn main:app --reload --port 8000
 **Frontend:**
 ```bash
 cd frontend
-python -m http.server 3000
+python -m http.server 4000
 ```
 
-Open http://localhost:3000 in your browser.
+Open http://localhost:4000 in your browser.
 
 ## Usage
 
