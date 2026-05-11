@@ -539,6 +539,12 @@ class App {
             if (error.name === 'AbortError') {
                 return;
             }
+            // If training already completed successfully, don't clobber the state.
+            // This guards against spurious reader.read() errors when the SSE
+            // connection closes after the final 'complete' event.
+            if (this._trainingState === 'complete' || this._trainingCompleted) {
+                return;
+            }
             this._trainingActive = false;
             this._trainingState = 'error';
             this.showToast('Training failed: ' + error.message, 'error');
