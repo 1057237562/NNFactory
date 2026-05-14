@@ -82,10 +82,6 @@ class CodeGenerator:
             "hardswish": "nn.Hardswish",
             "input": "Input",
             "output": "Output",
-            "add": "Add",
-            "concat": "Concat",
-            "reshape": "Reshape",
-            "view": "View",
         }
         return type_map.get(layer_type.lower(), f"nn.{layer_type}")
 
@@ -246,17 +242,6 @@ class CodeGenerator:
             upscale_factor = layer.params.get("upscale_factor", 2)
             return f"nn.PixelShuffle(upscale_factor={upscale_factor})"
         
-        if layer_type == "add":
-            return "Add()"
-        
-        if layer_type == "concat":
-            dim = layer.params.get("dim", 1)
-            return f"Concat(dim={dim})"
-        
-        if layer_type == "view":
-            shape = layer.params.get("shape", [-1])
-            return f"View({shape})"
-        
         params_str = self._format_params(layer.params) if layer.params else ""
         return f"{self._get_layer_type(layer_type)}({params_str})"
 
@@ -292,17 +277,6 @@ class CodeGenerator:
         
         if layer_type in ["lstm", "gru", "rnn"]:
             return f"x, _ = self.{layer.id}({input_var})"
-        
-        if layer_type == "add":
-            return f"x = {input_var}"
-        
-        if layer_type == "concat":
-            return f"x = {input_var}"
-        
-        if layer_type == "view":
-            shape = layer.params.get("shape", [-1])
-            shape_str = ", ".join(str(s) for s in shape)
-            return f"x = {input_var}.view({shape_str})"
         
         return f"x = self.{layer.id}({input_var})"
 
@@ -403,32 +377,6 @@ class CodeGenerator:
         code.append("import torch")
         code.append("import torch.nn as nn")
         code.append("import torch.nn.functional as F")
-        code.append("")
-        code.append("")
-        code.append("class Add(nn.Module):")
-        code.append("    def __init__(self):")
-        code.append("        super().__init__()")
-        code.append("")
-        code.append("    def forward(self, x):")
-        code.append("        return x + x")
-        code.append("")
-        code.append("")
-        code.append("class Concat(nn.Module):")
-        code.append("    def __init__(self, dim=1):")
-        code.append("        super().__init__()")
-        code.append("        self.dim = dim")
-        code.append("")
-        code.append("    def forward(self, x):")
-        code.append("        return torch.cat([x, x], dim=self.dim)")
-        code.append("")
-        code.append("")
-        code.append("class View(nn.Module):")
-        code.append("    def __init__(self, shape):")
-        code.append("        super().__init__()")
-        code.append("        self.shape = shape")
-        code.append("")
-        code.append("    def forward(self, x):")
-        code.append("        return x.view(self.shape)")
         code.append("")
         code.append("")
         code.append(f"class {model_name}(nn.Module):")
