@@ -4,7 +4,7 @@ import threading
 import time
 import traceback
 from datetime import datetime
-from typing import Any, Callable, Generator, Optional
+from typing import Any, Callable, Optional
 
 import torch
 import torch.nn as nn
@@ -15,18 +15,13 @@ from PIL import Image
 
 
 class DeviceDataLoader:
-    loader: DataLoader[Any]
-    device: str
-    stream: Optional[torch.cuda.Stream]
-    _iterator: Optional[object]
-
     def __init__(self, loader: DataLoader[Any], device: str) -> None:
         self.loader = loader
         self.device = device
         self.stream = torch.cuda.Stream() if device.startswith("cuda") else None
         self._iterator = None
 
-    def __iter__(self) -> Generator[tuple[torch.Tensor, ...], None, None]:
+    def __iter__(self) -> Any:
         if self.stream is None:
             for batch in self.loader:
                 yield tuple(t.to(self.device, non_blocking=True) if isinstance(t, torch.Tensor) else t for t in batch)
@@ -35,11 +30,11 @@ class DeviceDataLoader:
         self._iterator = iter(self.loader)
         try:
             batch = next(self._iterator)
-            batch = tuple(t.pin_memory() if isinstance(t, torch.Tensor) else t for t in batch)  # type: ignore[union-attr]
+            batch = tuple(t.pin_memory() if isinstance(t, torch.Tensor) else t for t in batch)
         except StopIteration:
             return
 
-        for next_batch in self._iterator:  # type: ignore[union-attr]
+        for next_batch in self._iterator:
             with torch.cuda.stream(self.stream):
                 next_batch = tuple(
                     t.to(self.device, non_blocking=True) if isinstance(t, torch.Tensor) else t
@@ -66,13 +61,7 @@ class DeviceDataLoader:
         return len(self.loader)
 
 
-class ImageFolderWithTransform(torch.utils.data.Dataset[tuple[Any, ...]]):
-    root_dir: str
-    transform: Optional[Callable[[Image.Image], Any]]
-    samples: list[tuple[str, int]]
-    classes: list[str]
-    class_to_idx: dict[str, int]
-
+class ImageFolderWithTransform(torch.utils.data.Dataset[Any]):
     def __init__(self, root_dir: str, transform: Optional[Callable[[Image.Image], Any]] = None) -> None:
         self.root_dir = root_dir
         self.transform = transform
@@ -98,7 +87,7 @@ class ImageFolderWithTransform(torch.utils.data.Dataset[tuple[Any, ...]]):
 
     def __getitem__(self, idx: int) -> tuple[Any, int]:
         path, label = self.samples[idx]
-        image: Any = Image.open(path).convert("RGB")
+        image = Image.open(path).convert("RGB")
         if self.transform:
             image = self.transform(image)
         return image, label
@@ -107,37 +96,30 @@ class ImageFolderWithTransform(torch.utils.data.Dataset[tuple[Any, ...]]):
 class TrainingEngine:
     TEMP_DIR: str = os.path.join(os.path.dirname(os.path.dirname(__file__)), "temp")
 
-    blueprint: Any
-    code_generator: Any
-    is_training: bool
-    _stop_event: threading.Event
-    _temp_path: Optional[str]
-    _weights_path: Optional[str]
-
     def __init__(self, blueprint: Any, code_generator: Any) -> None:
         self.blueprint = blueprint
         self.code_generator = code_generator
         self.is_training = False
         self._stop_event = threading.Event()
-        self._temp_path = None
-        self._weights_path = None
+        self._temp_path: Optional[str] = None
+        self._weights_path: Optional[str] = None
         os.makedirs(self.TEMP_DIR, exist_ok=True)
 
     def _build_model(self, device: str = "cpu") -> Any:
-        code: str = self.code_generator.generate()
+        code = self.code_generator.generate()
         self._temp_path = self._write_temp_module(code)
         module = self._load_module(self._temp_path)
-        model_class: type = getattr(module, self.blueprint.model_name)
-        model: Any = model_class()
+        model_class = getattr(module, self.blueprint.model_name)
+        model = model_class()
         model = model.to(device)
         return model
 
     def _write_temp_module(self, code: str) -> str:
-        timestamp: str = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename: str = f"{self.blueprint.model_name}_{timestamp}.py"
-        path: str = os.path.join(self.TEMP_DIR, filename)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{self.blueprint.model_name}_{timestamp}.py"
+        path = os.path.join(self.TEMP_DIR, filename)
         with open(path, "w") as f:
-            _ = f.write(code)
+            f.write(code)
         return path
 
     @staticmethod
@@ -154,22 +136,22 @@ class TrainingEngine:
         self._weights_path = None
 
     def _create_synthetic_dataset(self, config: dict[str, Any]) -> tuple[DataLoader[tuple[torch.Tensor, ...]], DataLoader[tuple[torch.Tensor, ...]], int]:
-        input_size: list[int] = config.get("input_size", [3, 224, 224])
-        num_classes: int = config.get("num_classes", 10)
-        num_samples: int = config.get("num_samples", 1000)
-        val_ratio: float = config.get("val_ratio", 0.2)
-        batch_size: int = config.get("batch_size", 32)
+        input_size = config.get("input_size", [3, 224, 224])
+        num_classes = config.get("num_classes", 10)
+        num_samples = config.get("num_samples", 1000)
+        val_ratio = config.get("val_ratio", 0.2)
+        batch_size = config.get("batch_size", 32)
 
-        train_size: int = int(num_samples * (1 - val_ratio))
-        val_size: int = num_samples - train_size
-        c: int = input_size[0]
-        h: int = input_size[1] if len(input_size) > 1 else 1
-        w: int = input_size[2] if len(input_size) > 2 else 1
+        train_size = int(num_samples * (1 - val_ratio))
+        val_size = num_samples - train_size
+        c = input_size[0]
+        h = input_size[1] if len(input_size) > 1 else 1
+        w = input_size[2] if len(input_size) > 2 else 1
 
         x_train = torch.randn(train_size, c, h, w)
-        y_train = torch.randint(0, num_classes, (train_size,))  # type: ignore[attr-defined]
+        y_train = torch.randint(0, num_classes, (train_size,))
         x_val = torch.randn(val_size, c, h, w)
-        y_val = torch.randint(0, num_classes, (val_size,))  # type: ignore[attr-defined]
+        y_val = torch.randint(0, num_classes, (val_size,))
 
         train_loader = DataLoader(TensorDataset(x_train, y_train), batch_size=batch_size, shuffle=True, pin_memory=True)
         val_loader = DataLoader(TensorDataset(x_val, y_val), batch_size=batch_size, shuffle=False, pin_memory=True)
@@ -190,20 +172,20 @@ class TrainingEngine:
         data_path: str, transform: Any, batch_size: int, val_ratio: float
     ) -> tuple[DataLoader[Any], DataLoader[Any]]:
         full_dataset = ImageFolderWithTransform(data_path, transform=transform)
-        train_size: int = int(len(full_dataset) * (1 - val_ratio))
-        val_size: int = len(full_dataset) - train_size
+        train_size = int(len(full_dataset) * (1 - val_ratio))
+        val_size = len(full_dataset) - train_size
         train_dataset, val_dataset = torch.utils.data.random_split(full_dataset, [train_size, val_size])
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
         val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=True)
         return train_loader, val_loader
 
     def _load_real_dataset(self, ds_info: dict[str, Any], config: dict[str, Any]) -> tuple[DataLoader[Any], DataLoader[Any], int]:
-        batch_size: int = config.get("batch_size", 32)
-        val_ratio: float = config.get("val_ratio", 0.2)
-        input_size: list[int] = ds_info.get("input_shape", [3, 224, 224])
-        num_classes: int = ds_info.get("num_classes", 10)
-        dataset_type: str = ds_info.get("dataset_type", "")
-        data_path: str = ds_info.get("file_path", "")
+        batch_size = config.get("batch_size", 32)
+        val_ratio = config.get("val_ratio", 0.2)
+        input_size = ds_info.get("input_shape", [3, 224, 224])
+        num_classes = ds_info.get("num_classes", 10)
+        dataset_type = ds_info.get("dataset_type", "")
+        data_path = ds_info.get("file_path", "")
 
         if dataset_type == "image_classification":
             normalize: transforms.Normalize
@@ -235,25 +217,25 @@ class TrainingEngine:
         elif dataset_type == "tabular_csv":
             import csv
             import numpy as np
-            feature_cols: list[str] = ds_info.get("metadata", {}).get("feature_columns", [])
-            label_col: Optional[str] = ds_info.get("metadata", {}).get("label_column")
-            numeric_cols: list[str] = ds_info.get("metadata", {}).get("numeric_columns", [])
+            feature_cols = ds_info.get("metadata", {}).get("feature_columns", [])
+            label_col = ds_info.get("metadata", {}).get("label_column")
+            numeric_cols = ds_info.get("metadata", {}).get("numeric_columns", [])
 
             with open(data_path, "r", encoding="utf-8-sig") as f:
                 reader = csv.DictReader(f)
-                rows: list[dict[str, Any]] = list(reader)
+                rows = list(reader)
 
             if label_col and rows and label_col in rows[0]:
-                labels_str: list[str] = [row[label_col] for row in rows]
-                unique_labels: list[str] = sorted(set(labels_str))
-                label_map: dict[str, int] = {lbl: i for i, lbl in enumerate(unique_labels)}
+                labels_str = [row[label_col] for row in rows]
+                unique_labels = sorted(set(labels_str))
+                label_map = {lbl: i for i, lbl in enumerate(unique_labels)}
                 y = np.array([label_map[lbl] for lbl in labels_str])
                 num_classes = len(unique_labels)
             else:
                 y = np.zeros(len(rows))
                 num_classes = 0
 
-            cols_to_use: list[str] = numeric_cols if numeric_cols else feature_cols
+            cols_to_use = numeric_cols if numeric_cols else feature_cols
             x_matrix = np.zeros((len(rows), len(cols_to_use)))
             for i, row in enumerate(rows):
                 for j, col in enumerate(cols_to_use):
@@ -281,27 +263,23 @@ class TrainingEngine:
         else:
             return self._create_synthetic_dataset(config)
 
-    def train(self, config: dict[str, Any]) -> Generator[dict[str, Any], None, None]:
+    def train(self, config: dict[str, Any]) -> Any:
         self.is_training = True
         self._stop_event.clear()
 
-        epoch: int = -1
         try:
-            device: str = config.get("device", "cpu")
-            requested_device: str = device
+            device = config.get("device", "cpu")
+            requested_device = device
             if device == "cuda" and not torch.cuda.is_available():
                 device = "cpu"
             device_obj = torch.device(device)
             if self._stop_event.is_set():
                 yield {"type": "stopped", "message": "Training cancelled", "epochs_completed": 0}
                 return
-            model: Any = self._build_model(device)
+            model = self._build_model(device)
             if self._stop_event.is_set():
                 yield {"type": "stopped", "message": "Training cancelled", "epochs_completed": 0}
                 return
-            train_loader: Any
-            val_loader: Any
-            num_classes: int
             train_loader, val_loader, num_classes = self._create_dataset_from_config(config)
             if self._stop_event.is_set():
                 yield {"type": "stopped", "message": "Training cancelled", "epochs_completed": 0}
@@ -314,21 +292,21 @@ class TrainingEngine:
                 float(config.get("learning_rate", 0.001)),
                 float(config.get("weight_decay", 0.0))
             )
-            scheduler: Any = self._get_scheduler(
+            scheduler = self._get_scheduler(
                 str(config.get("scheduler", "none")), optimizer,
                 int(config.get("step_size", 30)),
                 float(config.get("gamma", 0.1))
             )
 
-            device_info: str = f"{device_obj} ({torch.cuda.get_device_name(0)})" if device == "cuda" else "cpu"
+            device_info = f"{device_obj} ({torch.cuda.get_device_name(0)})" if device == "cuda" else "cpu"
             if requested_device == "cuda" and device == "cpu":
                 device_info += " [CUDA unavailable, fell back to CPU]"
 
-            history: dict[str, list[float]] = {"train_loss": [], "val_loss": [], "train_acc": [], "val_acc": [], "lr": []}
-            epochs: int = int(config.get("epochs", 10))
-            total_steps: int = epochs * len(train_loader)
-            step_count: int = 0
-            start_time: float = time.time()
+            history = {"train_loss": [], "val_loss": [], "train_acc": [], "val_acc": [], "lr": []}
+            epochs = int(config.get("epochs", 10))
+            total_steps = epochs * len(train_loader)
+            step_count = 0
+            start_time = time.time()
 
             yield {
                 "type": "device_info",
@@ -346,9 +324,6 @@ class TrainingEngine:
                 if self._stop_event.is_set():
                     break
 
-                epoch_loss: float
-                epoch_acc: float
-                progress_events: list[dict[str, Any]]
                 epoch_loss, epoch_acc, step_count, progress_events = self._train_one_epoch(
                     model, train_loader, criterion, optimizer, device, epoch, epochs, total_steps, step_count, start_time
                 )
@@ -363,7 +338,7 @@ class TrainingEngine:
 
                 if scheduler is not None and str(config.get("scheduler", "none")) != "none":
                     if config.get("scheduler") == "reduce_on_plateau":
-                        scheduler.step(val_loss)  # type: ignore[call-arg]
+                        scheduler.step(val_loss)
                     else:
                         scheduler.step()
 
@@ -381,7 +356,7 @@ class TrainingEngine:
                     "val_loss": val_loss,
                     "train_acc": epoch_acc,
                     "val_acc": val_acc,
-                    "lr": optimizer.param_groups[0]["lr"],
+                    "progress": ((epoch + 1) / epochs) * 100,
                     "elapsed": time.time() - start_time,
                     "history": history
                 }
@@ -397,10 +372,10 @@ class TrainingEngine:
                 }
                 return
 
-            total_params: int = sum(p.numel() for p in model.parameters())
-            trainable_params: int = sum(p.numel() for p in model.parameters() if p.requires_grad)
+            total_params = sum(p.numel() for p in model.parameters())
+            trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-            weights_filename: str = f"{self.blueprint.model_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pth"
+            weights_filename = f"{self.blueprint.model_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pth"
             self._weights_path = os.path.join(self.TEMP_DIR, weights_filename)
             torch.save(model.state_dict(), self._weights_path)
 
@@ -439,18 +414,18 @@ class TrainingEngine:
         start_time: float
     ) -> tuple[float, float, int, list[dict[str, Any]]]:
         model.train()
-        train_loss: float = 0.0
-        train_correct: int = 0
-        train_total: int = 0
-        progress_events: list[dict[str, Any]] = []
+        train_loss = 0.0
+        train_correct = 0
+        train_total = 0
+        progress_events = []
 
         for batch_x, batch_y in train_loader:
             if self._stop_event.is_set():
                 break
 
             optimizer.zero_grad()
-            output: torch.Tensor = self._forward(model, batch_x)
-            loss: torch.Tensor = self._compute_loss(output, batch_y, criterion)
+            output = self._forward(model, batch_x)
+            loss = self._compute_loss(output, batch_y, criterion)
             loss.backward()
             optimizer.step()
 
@@ -479,19 +454,17 @@ class TrainingEngine:
 
     def evaluate(self, config: dict[str, Any]) -> dict[str, Any]:
         try:
-            device: str = config.get("device", "cpu")
+            device = config.get("device", "cpu")
             if device == "cuda" and not torch.cuda.is_available():
                 device = "cpu"
-            model: Any = self._build_model(device)
+            model = self._build_model(device)
             _, val_loader, num_classes = self._create_dataset_from_config(config)
             val_loader = DeviceDataLoader(val_loader, device)
             criterion = self._get_criterion(str(config.get("loss_function", "cross_entropy"))).to(device)
-            val_loss: float
-            val_acc: float
             val_loss, val_acc = self._evaluate_model(model, val_loader, criterion, device)
-            total_params: int = sum(p.numel() for p in model.parameters())
-            trainable_params: int = sum(p.numel() for p in model.parameters() if p.requires_grad)
-            per_class: list[dict[str, Any]] = self._compute_per_class_stats(model, val_loader, num_classes, device)
+            total_params = sum(p.numel() for p in model.parameters())
+            trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+            per_class = self._compute_per_class_stats(model, val_loader, num_classes, device)
 
             return {
                 "status": "success",
@@ -509,14 +482,14 @@ class TrainingEngine:
 
     def _evaluate_model(self, model: Any, data_loader: Any, criterion: nn.Module, device: str = "cpu") -> tuple[float, float]:
         model.eval()
-        total_loss: float = 0.0
-        correct: int = 0
-        total: int = 0
+        total_loss = 0.0
+        correct = 0
+        total = 0
 
         with torch.no_grad():
             for batch_x, batch_y in data_loader:
-                output: torch.Tensor = self._forward(model, batch_x)
-                loss: torch.Tensor = self._compute_loss(output, batch_y, criterion)
+                output = self._forward(model, batch_x)
+                loss = self._compute_loss(output, batch_y, criterion)
                 total_loss += loss.item() * batch_y.size(0)
                 total += batch_y.size(0)
                 if output.dim() > 1:
@@ -530,16 +503,16 @@ class TrainingEngine:
         self, model: Any, data_loader: Any, num_classes: int, device: str = "cpu"
     ) -> list[dict[str, Any]]:
         model.eval()
-        class_correct: list[int] = [0] * num_classes
-        class_total: list[int] = [0] * num_classes
+        class_correct = [0] * num_classes
+        class_total = [0] * num_classes
 
         with torch.no_grad():
             for batch_x, batch_y in data_loader:
-                output: torch.Tensor = self._forward(model, batch_x)
+                output = self._forward(model, batch_x)
                 if output.dim() > 1:
                     predicted = output.max(1)[1]
                     for i in range(batch_y.size(0)):
-                        label: int = int(batch_y[i].item())
+                        label = int(batch_y[i].item())
                         if label < num_classes:
                             class_total[label] += 1
                             if int(predicted[i].item()) == label:

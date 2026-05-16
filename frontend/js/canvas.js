@@ -34,7 +34,7 @@ class CanvasManager {
             propertiesPanel.addEventListener('mouseup', (e) => e.stopPropagation());
         }
         
-      document.getElementById('zoomIn').addEventListener('click', () => this.zoom(0.1));
+        document.getElementById('zoomIn').addEventListener('click', () => this.zoom(0.1));
         document.getElementById('zoomOut').addEventListener('click', () => this.zoom(-0.1));
         document.getElementById('zoomReset').addEventListener('click', () => this.resetZoom());
         
@@ -222,9 +222,8 @@ class CanvasManager {
             ctx.stroke();
             
             ctx.shadowBlur = 0;
-            
+
             const arrowSize = 6;
-            const angle = Math.atan2(end.y - end.y, end.x - end.x);
             const arrowX = end.x;
             const arrowY = end.y;
             

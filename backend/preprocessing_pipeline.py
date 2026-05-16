@@ -31,7 +31,7 @@ class PreprocessingPipeline:
         self.ds_manager = dataset_manager
         self.source_info = self.ds_manager.get_dataset(source_dataset_id)
         if not self.source_info:
-            raise ValueError(f"Dataset {source_id} not found")
+            raise ValueError(f"Dataset {self.source_id} not found")
         
         self.dataset_type = self.source_info.get("dataset_type", "")
         self.file_path = self.source_info.get("file_path", "")

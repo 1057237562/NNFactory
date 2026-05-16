@@ -61,8 +61,6 @@ class NodeManager {
             this.createNode('output', rect.width / 2 / this.canvas.scale - this.canvas.offsetX / this.canvas.scale + 200, 
                            rect.height / 2 / this.canvas.scale - this.canvas.offsetY / this.canvas.scale);
         });
-        
-         
     }
     
     onDrop(e) {

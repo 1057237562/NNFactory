@@ -25,10 +25,9 @@ class App {
                 const blueprint = JSON.parse(saved);
                 this.nodeManager.importNodes(blueprint.layers || []);
                 this.connectionManager.importConnections(blueprint.connections || []);
-                
+
                 this._applyBlueprintFields(blueprint);
                 this.renderConnections();
-                // Trigger autosave only after both nodes and connections are fully imported
                 this.saveToLocalStorage();
                 this.showToast('Session restored!', 'success');
             } catch (error) {
@@ -112,8 +111,8 @@ class App {
                 }
             }
         });
-        
- 
+
+
     }
     
     setupCategoryToggles() {
