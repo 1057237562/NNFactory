@@ -61,6 +61,17 @@ class DeviceDataLoader:
         return len(self.loader)
 
 
+class _LenWrapper:
+    """Wraps an iterable with a fixed __len__."""
+    def __init__(self, iterable: Any, length: int) -> None:
+        self._iterable = iterable
+        self._length = length
+    def __iter__(self) -> Any:
+        return iter(self._iterable)
+    def __len__(self) -> int:
+        return self._length
+
+
 class ImageFolderWithTransform(torch.utils.data.Dataset[Any]):
     def __init__(self, root_dir: str, transform: Optional[Callable[[Image.Image], Any]] = None) -> None:
         self.root_dir = root_dir
@@ -424,8 +435,15 @@ class TrainingEngine:
             if self._stop_event.is_set():
                 yield {"type": "stopped", "message": "Training cancelled", "epochs_completed": 0}
                 return
-            train_loader = DeviceDataLoader(train_loader, device)
-            val_loader = DeviceDataLoader(val_loader, device)
+
+            # Detect GPU-resident generators (functions, not DataLoaders)
+            is_gpu_resident = callable(train_loader)
+            if is_gpu_resident:
+                train_loader = train_loader()
+                val_loader = val_loader()
+            else:
+                train_loader = DeviceDataLoader(train_loader, device)
+                val_loader = DeviceDataLoader(val_loader, device)
             criterion = self._get_criterion(str(config.get("loss_function", "cross_entropy"))).to(device_obj)
             optimizer = self._get_optimizer(
                 str(config.get("optimizer", "adam")), model,
@@ -444,7 +462,17 @@ class TrainingEngine:
 
             history = {"train_loss": [], "val_loss": [], "train_acc": [], "val_acc": [], "lr": []}
             epochs = int(config.get("epochs", 10))
-            total_steps = epochs * len(train_loader)
+            if is_gpu_resident:
+                n = config.get("num_samples", 0)
+                batch_size = config.get("batch_size", 32)
+                val_ratio = config.get("val_ratio", 0.2)
+                if n > 0:
+                    train_samples = int(n * (1 - val_ratio))
+                    total_steps = epochs * max(1, train_samples // batch_size)
+                else:
+                    total_steps = epochs * 100
+            else:
+                total_steps = epochs * len(train_loader)
             step_count = 0
             start_time = time.time()
 
@@ -600,7 +628,10 @@ class TrainingEngine:
             torch.set_num_threads(config.get("num_threads", 4))
             model = self._build_model(device)
             _, val_loader, num_classes = self._create_dataset_from_config(config)
-            val_loader = DeviceDataLoader(val_loader, device)
+            if callable(val_loader):
+                val_loader = val_loader()
+            else:
+                val_loader = DeviceDataLoader(val_loader, device)
             criterion = self._get_criterion(str(config.get("loss_function", "cross_entropy"))).to(device)
             val_loss, val_acc = self._evaluate_model(model, val_loader, criterion, device)
             total_params = sum(p.numel() for p in model.parameters())

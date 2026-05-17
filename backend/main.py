@@ -67,6 +67,7 @@ class EvalConfig(BaseModel):
     num_samples: int = 1000
     val_ratio: float = 0.2
     loss_function: str = "cross_entropy"
+    device: str = "cpu"
 
 class TrainWithDatasetConfig(BaseModel):
     blueprint: Blueprint
@@ -159,7 +160,8 @@ async def evaluate_model(config: EvalConfig):
         "num_classes": config.num_classes,
         "num_samples": config.num_samples,
         "val_ratio": config.val_ratio,
-        "loss_function": config.loss_function
+        "loss_function": config.loss_function,
+        "device": config.device,
     }
 
     result = engine.evaluate(eval_config)
