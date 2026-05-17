@@ -13,6 +13,7 @@ from code_generator import CodeGenerator
 from training_engine import TrainingEngine
 from dataset_manager import DatasetManager
 from preprocessing_pipeline import PreprocessingPipeline, PreprocessingResult
+from device_utils import is_cuda_available, is_rocm_available, is_xpu_available, is_mps_available
 
 app = FastAPI(title="NNFactory Backend", version="1.0.0")
 executor = ThreadPoolExecutor(max_workers=4)
@@ -171,6 +172,19 @@ async def evaluate_model(config: EvalConfig):
 async def health():
     return {"status": "ok"}
 
+@app.get("/devices")
+async def list_devices():
+    cuda_avail, cuda_vendor = is_cuda_available()
+    return {
+        "devices": [
+            {"id": "cpu",  "name": "CPU",                "available": True},
+            {"id": "cuda", "name": "NVIDIA CUDA",         "available": cuda_avail and cuda_vendor == "nvidia"},
+            {"id": "rocm", "name": "AMD ROCm",            "available": is_rocm_available()},
+            {"id": "xpu",  "name": "Intel XPU",           "available": is_xpu_available()},
+            {"id": "mps",  "name": "Apple MPS",           "available": is_mps_available()},
+        ]
+    }
+
 @app.get("/datasets")
 async def list_datasets():
     return {"datasets": dataset_manager.list_datasets()}
@@ -315,17 +329,22 @@ async def train_with_dataset(config: TrainWithDatasetConfig):
         "device": config.blueprint.device,
     }
 
+    def _next_or_none(it):
+        try:
+            return next(it)
+        except StopIteration:
+            return None
+
     async def event_stream():
         loop = asyncio.get_event_loop()
         train_executor = ThreadPoolExecutor(max_workers=1)
         iterator = iter(engine.train(train_config))
         try:
             while True:
-                try:
-                    event = await loop.run_in_executor(train_executor, next, iterator)
-                    yield f"data: {json.dumps(event)}\n\n"
-                except StopIteration:
+                event = await loop.run_in_executor(train_executor, _next_or_none, iterator)
+                if event is None:
                     break
+                yield f"data: {json.dumps(event)}\n\n"
         finally:
             train_executor.shutdown(wait=False)
             training_engines.pop(train_id, None)
