@@ -1,6 +1,6 @@
 from typing import Any
 from pydantic import BaseModel
-from device_utils import resolve_device, get_device_detection_code
+from device_utils import get_device_detection_code
 
 class LayerConfig(BaseModel):
     id: str

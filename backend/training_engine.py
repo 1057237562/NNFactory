@@ -4,7 +4,6 @@ import threading
 import time
 import traceback
 from datetime import datetime
-from types import GeneratorType
 from typing import Any, Callable, Optional
 
 import torch
