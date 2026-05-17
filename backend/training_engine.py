@@ -4,6 +4,7 @@ import threading
 import time
 import traceback
 from datetime import datetime
+from types import GeneratorType
 from typing import Any, Callable, Optional
 
 import torch
@@ -174,14 +175,14 @@ class TrainingEngine:
         val_loader = DataLoader(TensorDataset(x_val, y_val), batch_size=batch_size, shuffle=False, pin_memory=True)
         return train_loader, val_loader, num_classes
 
-    def _create_dataset_from_config(self, config: dict[str, Any]) -> tuple[DataLoader[Any], DataLoader[Any], int]:
+    def _create_dataset_from_config(self, config: dict[str, Any]) -> tuple[Any, Any, int]:
         dataset_id: Any = config.get("dataset_id")
         if dataset_id:
             from dataset_manager import DatasetManager  # pyright: ignore[reportImplicitRelativeImport]
             dm = DatasetManager()
             ds_info: Optional[dict[str, Any]] = dm.get_dataset(dataset_id)
             if ds_info:
-                return self._load_real_dataset(ds_info, config)
+                return self._load_real_dataset(ds_info, config, config.get("device", "cpu"))
         return self._create_synthetic_dataset(config)
 
     @staticmethod
@@ -208,7 +209,109 @@ class TrainingEngine:
 
         return train_loader, val_loader
 
-    def _load_real_dataset(self, ds_info: dict[str, Any], config: dict[str, Any]) -> tuple[DataLoader[Any], DataLoader[Any], int]:
+    @staticmethod
+    def _create_gpu_resident_loaders(
+        ds_info: dict[str, Any],
+        config: dict[str, Any],
+        device: str
+    ) -> tuple[Any, Any, int]:
+        """Create GPU-resident batch generators for tabular CSV data.
+
+        Loads the entire dataset into GPU memory and yields batches via
+        random-index slicing, bypassing DataLoader overhead. Falls back to
+        CPU DataLoader if GPU memory is insufficient.
+        """
+        import csv
+        import numpy as np
+
+        batch_size = config.get("batch_size", 32)
+        val_ratio = config.get("val_ratio", 0.2)
+        feature_cols = ds_info.get("metadata", {}).get("feature_columns", [])
+        label_col = ds_info.get("metadata", {}).get("label_column")
+        numeric_cols = ds_info.get("metadata", {}).get("numeric_columns", [])
+        data_path = ds_info.get("file_path", "")
+
+        with open(data_path, "r", encoding="utf-8-sig") as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+
+        if label_col and rows and label_col in rows[0]:
+            labels_str = [row[label_col] for row in rows]
+            unique_labels = sorted(set(labels_str))
+            label_map = {lbl: i for i, lbl in enumerate(unique_labels)}
+            y = np.array([label_map[lbl] for lbl in labels_str])
+            num_classes = len(unique_labels)
+        else:
+            y = np.zeros(len(rows))
+            num_classes = 0
+
+        cols_to_use = numeric_cols if numeric_cols else feature_cols
+        x_matrix = np.zeros((len(rows), len(cols_to_use)))
+        for i, row in enumerate(rows):
+            for j, col in enumerate(cols_to_use):
+                try:
+                    x_matrix[i, j] = float(row.get(col, 0))
+                except (ValueError, TypeError):
+                    x_matrix[i, j] = 0
+
+        # Skip redundant normalization if dataset was already preprocessed
+        if not ds_info.get("metadata", {}).get("is_normalized", False):
+            mean = x_matrix.mean(axis=0)
+            std = x_matrix.std(axis=0) + 1e-8
+            x_normalized = (x_matrix - mean) / std
+        else:
+            x_normalized = x_matrix
+
+        x_tensor = torch.tensor(x_normalized, dtype=torch.float32)
+        y_tensor = torch.tensor(y, dtype=torch.long)
+
+        # GPU memory pre-check: estimate required bytes for both tensors
+        bytes_needed = (
+            x_tensor.nelement() * x_tensor.element_size()
+            + y_tensor.nelement() * y_tensor.element_size()
+        )
+        gpu_ok = TrainingEngine._check_gpu_memory(bytes_needed, device)
+
+        n = x_tensor.size(0)
+        train_size = int(n * (1 - val_ratio))
+
+        if gpu_ok:
+            x_gpu = x_tensor.to(device)
+            y_gpu = y_tensor.to(device)
+
+            def _gpu_batch_generator(
+                x: torch.Tensor, y: torch.Tensor, batch_sz: int, shuffle: bool = True
+            ) -> Any:
+                n_total = x.size(0)
+                indices = torch.randperm(n_total) if shuffle else torch.arange(n_total)
+                for i in range(0, n_total, batch_sz):
+                    idx = indices[i:i + batch_sz]
+                    yield x[idx], y[idx]
+
+            # Use slicing views to avoid copying the full sub-tensors
+            def train_iter() -> Any:
+                yield from _gpu_batch_generator(
+                    x_gpu[:train_size], y_gpu[:train_size], batch_size, shuffle=True
+                )
+
+            def val_iter() -> Any:
+                yield from _gpu_batch_generator(
+                    x_gpu[train_size:], y_gpu[train_size:], batch_size, shuffle=False
+                )
+
+            return train_iter, val_iter, num_classes
+
+        # GPU memory insufficient: fall back to CPU DataLoader
+        dataset = TensorDataset(x_tensor, y_tensor)
+        val_size = n - train_size
+        train_dataset, val_dataset = torch.utils.data.random_split(
+            dataset, [train_size, val_size]
+        )
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
+        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, pin_memory=True)
+        return train_loader, val_loader, num_classes
+
+    def _load_real_dataset(self, ds_info: dict[str, Any], config: dict[str, Any], device: str = "cpu") -> tuple[Any, Any, int]:
         batch_size = config.get("batch_size", 32)
         val_ratio = config.get("val_ratio", 0.2)
         input_size = ds_info.get("input_shape", [3, 224, 224])
@@ -283,6 +386,9 @@ class TrainingEngine:
 
             x_tensor = torch.tensor(x_normalized, dtype=torch.float32)
             y_tensor = torch.tensor(y, dtype=torch.long)
+
+            if device == "cuda":
+                return self._create_gpu_resident_loaders(ds_info, config, device)
 
             dataset = TensorDataset(x_tensor, y_tensor)
             train_size = int(len(dataset) * (1 - val_ratio))
