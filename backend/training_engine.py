@@ -134,6 +134,24 @@ class TrainingEngine:
         self._temp_path = None
         self._weights_path = None
 
+    @staticmethod
+    def _check_gpu_memory(tensor_size_bytes: int, device: str = "cuda") -> bool:
+        """Check if enough GPU memory is available for a tensor of given size.
+
+        Returns True if estimated memory (2x tensor_size for forward/backward buffers)
+        fits in available VRAM. Returns False if CUDA is unavailable or memory insufficient.
+        """
+        if not torch.cuda.is_available():
+            return False
+        try:
+            total = torch.cuda.get_device_properties(0).total_memory
+            allocated = torch.cuda.memory_allocated(0)
+            available = total - allocated
+            # Require 2x dataset size for forward + backward buffers
+            return tensor_size_bytes * 2 < available
+        except Exception:
+            return False
+
     def _create_synthetic_dataset(self, config: dict[str, Any]) -> tuple[DataLoader[tuple[torch.Tensor, ...]], DataLoader[tuple[torch.Tensor, ...]], int]:
         input_size = config.get("input_size", [3, 224, 224])
         num_classes = config.get("num_classes", 10)
