@@ -57,6 +57,7 @@ class TrainConfig(BaseModel):
     input_size: list[int] = [3, 224, 224]
     num_classes: int = 10
     num_samples: int = 1000
+    num_threads: int = 4
     val_ratio: float = 0.2
 
 class EvalConfig(BaseModel):
@@ -79,6 +80,7 @@ class TrainWithDatasetConfig(BaseModel):
     weight_decay: float = 0.0
     step_size: int = 30
     gamma: float = 0.1
+    num_threads: int = 4
     val_ratio: float = 0.2
 
 training_engines: dict[str, TrainingEngine] = {}
@@ -120,6 +122,7 @@ async def train_model(config: TrainConfig):
         "num_classes": config.num_classes,
         "num_samples": config.num_samples,
         "val_ratio": config.val_ratio,
+        "num_threads": config.num_threads,
         "device": config.blueprint.device
     }
 
@@ -305,6 +308,7 @@ async def train_with_dataset(config: TrainWithDatasetConfig):
         "num_classes": ds_info.get("num_classes", 10),
         "num_samples": ds_info.get("num_samples", 1000),
         "val_ratio": config.val_ratio,
+        "num_threads": config.num_threads,
         "dataset_id": config.dataset_id,
         "device": config.blueprint.device,
     }

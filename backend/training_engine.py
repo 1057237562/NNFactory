@@ -46,7 +46,6 @@ class DeviceDataLoader:
                 for t in batch
             )
 
-            torch.cuda.current_stream().synchronize()
             batch = next_batch
 
         with torch.cuda.stream(self.stream):
@@ -273,6 +272,7 @@ class TrainingEngine:
             if device == "cuda" and not torch.cuda.is_available():
                 device = "cpu"
             device_obj = torch.device(device)
+            torch.set_num_threads(config.get("num_threads", 4))
             if self._stop_event.is_set():
                 yield {"type": "stopped", "message": "Training cancelled", "epochs_completed": 0}
                 return
@@ -457,6 +457,7 @@ class TrainingEngine:
             device = config.get("device", "cpu")
             if device == "cuda" and not torch.cuda.is_available():
                 device = "cpu"
+            torch.set_num_threads(config.get("num_threads", 4))
             model = self._build_model(device)
             _, val_loader, num_classes = self._create_dataset_from_config(config)
             val_loader = DeviceDataLoader(val_loader, device)
