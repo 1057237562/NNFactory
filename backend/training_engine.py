@@ -174,8 +174,20 @@ class TrainingEngine:
         train_size = int(len(full_dataset) * (1 - val_ratio))
         val_size = len(full_dataset) - train_size
         train_dataset, val_dataset = torch.utils.data.random_split(full_dataset, [train_size, val_size])
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
-        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=True)
+
+        cpu_count = os.cpu_count() or 4
+        n_workers = min(4, cpu_count // 4) if cpu_count >= 4 else 1
+
+        try:
+            train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=n_workers, pin_memory=True)
+            # Quick validation to catch Windows spawn errors early
+            for _ in train_loader:
+                break
+            val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=n_workers, pin_memory=True)
+        except RuntimeError:
+            train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
+            val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=True)
+
         return train_loader, val_loader
 
     def _load_real_dataset(self, ds_info: dict[str, Any], config: dict[str, Any]) -> tuple[DataLoader[Any], DataLoader[Any], int]:
