@@ -14,12 +14,30 @@ from torch.utils.data import DataLoader, TensorDataset
 from torchvision import transforms
 from PIL import Image
 
+from device_utils import (  # pyright: ignore[reportImplicitRelativeImport]
+    resolve_device,
+    get_device_name,
+    is_cuda_available,
+    is_rocm_available,
+    is_xpu_available,
+    is_mps_available,
+)
+
 
 class DeviceDataLoader:
     def __init__(self, loader: DataLoader[Any], device: str) -> None:
         self.loader = loader
         self.device = device
-        self.stream = torch.cuda.Stream() if device.startswith("cuda") else None
+        self.device_type = resolve_device(device)
+        if self.device_type == "cuda":
+            self.stream = torch.cuda.Stream()
+        elif self.device_type == "xpu":
+            try:
+                self.stream = torch.xpu.Stream()
+            except (AttributeError, RuntimeError):
+                self.stream = None
+        else:
+            self.stream = None
         self._iterator = None
 
     def __iter__(self) -> Any:
@@ -27,6 +45,11 @@ class DeviceDataLoader:
             for batch in self.loader:
                 yield tuple(t.to(self.device, non_blocking=True) if isinstance(t, torch.Tensor) else t for t in batch)
             return
+
+        is_xpu = self.device_type == "xpu"
+        stream_cm = torch.xpu.stream if is_xpu else torch.cuda.stream
+        sync_fn = (torch.xpu.current_stream().synchronize
+                   if is_xpu else torch.cuda.current_stream().synchronize)
 
         self._iterator = iter(self.loader)
         try:
@@ -36,7 +59,7 @@ class DeviceDataLoader:
             return
 
         for next_batch in self._iterator:
-            with torch.cuda.stream(self.stream):
+            with stream_cm(self.stream):  # pyright: ignore[reportArgumentType]
                 next_batch = tuple(
                     t.to(self.device, non_blocking=True) if isinstance(t, torch.Tensor) else t
                     for t in next_batch
@@ -49,12 +72,12 @@ class DeviceDataLoader:
 
             batch = next_batch
 
-        with torch.cuda.stream(self.stream):
+        with stream_cm(self.stream):  # pyright: ignore[reportArgumentType]
             batch = tuple(
                 t.to(self.device, non_blocking=True) if isinstance(t, torch.Tensor) else t
                 for t in batch
             )
-        torch.cuda.current_stream().synchronize()
+        sync_fn()
         yield batch
 
     def __len__(self) -> int:
@@ -398,7 +421,7 @@ class TrainingEngine:
             x_tensor = torch.tensor(x_normalized, dtype=torch.float32)
             y_tensor = torch.tensor(y, dtype=torch.long)
 
-            if device == "cuda":
+            if resolve_device(device) == "cuda":
                 return self._create_gpu_resident_loaders(ds_info, config, device)
 
             dataset = TensorDataset(x_tensor, y_tensor)
@@ -420,7 +443,13 @@ class TrainingEngine:
         try:
             device = config.get("device", "cpu")
             requested_device = device
-            if device == "cuda" and not torch.cuda.is_available():
+            resolved = resolve_device(device)
+            target_unavailable = (
+                (resolved == "cuda" and not torch.cuda.is_available()) or
+                (resolved == "xpu" and not is_xpu_available()) or
+                (resolved == "mps" and not is_mps_available())
+            )
+            if target_unavailable:
                 device = "cpu"
             device_obj = torch.device(device)
             torch.set_num_threads(config.get("num_threads", 4))
@@ -456,9 +485,10 @@ class TrainingEngine:
                 float(config.get("gamma", 0.1))
             )
 
-            device_info = f"{device_obj} ({torch.cuda.get_device_name(0)})" if device == "cuda" else "cpu"
-            if requested_device == "cuda" and device == "cpu":
-                device_info += " [CUDA unavailable, fell back to CPU]"
+            device_name = get_device_name(requested_device)
+            device_info = f"{device_obj} ({device_name})" if device != "cpu" else "cpu"
+            if requested_device != "cpu" and device == "cpu":
+                device_info += f" [{requested_device.upper()} unavailable, fell back to CPU]"
 
             history = {"train_loss": [], "val_loss": [], "train_acc": [], "val_acc": [], "lr": []}
             epochs = int(config.get("epochs", 10))
@@ -479,7 +509,11 @@ class TrainingEngine:
             yield {
                 "type": "device_info",
                 "device": device_info,
+                "device_type": requested_device,
                 "cuda_available": torch.cuda.is_available(),
+                "rocm_available": is_rocm_available(),
+                "xpu_available": is_xpu_available(),
+                "mps_available": is_mps_available(),
                 "requested": requested_device,
                 "actual": device
             }
@@ -623,7 +657,10 @@ class TrainingEngine:
     def evaluate(self, config: dict[str, Any]) -> dict[str, Any]:
         try:
             device = config.get("device", "cpu")
-            if device == "cuda" and not torch.cuda.is_available():
+            resolved = resolve_device(device)
+            if (resolved == "cuda" and not torch.cuda.is_available()) or \
+               (resolved == "xpu" and not is_xpu_available()) or \
+               (resolved == "mps" and not is_mps_available()):
                 device = "cpu"
             torch.set_num_threads(config.get("num_threads", 4))
             model = self._build_model(device)
