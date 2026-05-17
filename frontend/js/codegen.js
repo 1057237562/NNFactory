@@ -39,7 +39,7 @@ class CodeGenerator {
     }
     
     generateFrontendFallback(blueprint) {
-        const { layers, connections, model_name, use_jit, use_compile } = blueprint;
+        const { layers, connections, model_name, use_jit, use_compile, device } = blueprint;
         
         const layersByType = {};
         layers.forEach(l => {
@@ -129,16 +129,28 @@ class CodeGenerator {
         
         code.push('');
         code.push(`if __name__ == '__main__':`);
-        code.push(`    model = ${model_name}()`);
+        code.push(`    ${this._getDeviceDetectionCode(device)}`);
+        code.push(`    model = ${model_name}().to(device)`);
         code.push(`    print(model)`);
         code.push(`    print(f'Total parameters: {sum(p.numel() for p in model.parameters()):,}')`);
         code.push('');
-        code.push(`    x = torch.randn(1, 3, 224, 224)`);
+        code.push(`    x = torch.randn(1, 3, 224, 224).to(device)`);
         code.push(`    output = model(x)`);
         code.push(`    print(f'Input shape: {x.shape}')`);
         code.push(`    print(f'Output shape: {output.shape}')`);
         
         return code.join('\n');
+    }
+    
+    _getDeviceDetectionCode(device) {
+        const detectionMap = {
+            cuda: "device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')",
+            rocm: "device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')",
+            xpu: "device = torch.device('xpu' if torch.xpu.is_available() else 'cpu')",
+            mps: "device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')",
+            cpu: "device = torch.device('cpu')",
+        };
+        return detectionMap[device] || detectionMap.cpu;
     }
     
     generateLayerInit(layer) {

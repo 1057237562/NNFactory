@@ -1,5 +1,6 @@
 from typing import Any
 from pydantic import BaseModel
+from device_utils import resolve_device, get_device_detection_code
 
 class LayerConfig(BaseModel):
     id: str
@@ -413,7 +414,8 @@ class CodeGenerator:
         
         code.append("")
         code.append(f"if __name__ == '__main__':")
-        code.append(f"    device = torch.device('{device}' if torch.cuda.is_available() else 'cpu')")
+        detection_line = get_device_detection_code(device)
+        code.append(f"    {detection_line}")
         code.append(f"    model = {model_name}().to(device)")
         code.append(f"    print(model)")
         code.append(f"    print(f'Total parameters: {{sum(p.numel() for p in model.parameters()):,}}')")
