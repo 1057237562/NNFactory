@@ -42,7 +42,10 @@
                 </label>
                 <select class="device-select" id="deviceSelect">
                     <option value="cpu">CPU</option>
-                    <option value="cuda">GPU (CUDA)</option>
+                    <option value="cuda">GPU (NVIDIA CUDA)</option>
+                    <option value="rocm">GPU (AMD ROCm)</option>
+                    <option value="xpu">GPU (Intel XPU)</option>
+                    <option value="mps">GPU (Apple MPS)</option>
                 </select>
                 <button id="validateBtn" class="btn btn-secondary" title="Validate Blueprint">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">

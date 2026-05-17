@@ -568,8 +568,16 @@ class App {
     handleTrainEvent(event) {
         if (event.type === 'device_info') {
             this.addTrainLog(`Device: ${event.device}`);
-            if (event.requested === 'cuda' && event.actual === 'cpu') {
-                this.showToast('CUDA unavailable, training on CPU. Install PyTorch with CUDA support to use GPU.', 'warning');
+            if (event.requested !== 'cpu' && event.actual === 'cpu') {
+                const deviceType = event.device_type || event.requested;
+                const deviceLabels = {
+                    cuda: 'NVIDIA CUDA',
+                    rocm: 'AMD ROCm',
+                    xpu: 'Intel XPU',
+                    mps: 'Apple MPS'
+                };
+                const label = deviceLabels[deviceType] || deviceType.toUpperCase();
+                this.showToast(`${label} unavailable, training on CPU.`, 'warning');
             }
         }
         
