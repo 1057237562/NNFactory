@@ -255,9 +255,13 @@ class TrainingEngine:
                     except (ValueError, TypeError):
                         x_matrix[i, j] = 0
 
-            mean = x_matrix.mean(axis=0)
-            std = x_matrix.std(axis=0) + 1e-8
-            x_normalized = (x_matrix - mean) / std
+            # Skip redundant normalization if dataset was already preprocessed with normalization
+            if not ds_info.get("metadata", {}).get("is_normalized", False):
+                mean = x_matrix.mean(axis=0)
+                std = x_matrix.std(axis=0) + 1e-8
+                x_normalized = (x_matrix - mean) / std
+            else:
+                x_normalized = x_matrix
 
             x_tensor = torch.tensor(x_normalized, dtype=torch.float32)
             y_tensor = torch.tensor(y, dtype=torch.long)

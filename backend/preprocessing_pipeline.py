@@ -284,6 +284,7 @@ class PreprocessingPipeline:
             if "normalization_stats" not in self.metadata:
                 self.metadata["normalization_stats"] = {}
             self.metadata["normalization_stats"][method] = stats
+            self.metadata["is_normalized"] = True
             
             return {
                 "affected_samples": len(all_rows),
