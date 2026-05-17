@@ -467,8 +467,10 @@ class TrainingEngine:
             # Detect GPU-resident generators (functions, not DataLoaders)
             is_gpu_resident = callable(train_loader)
             if is_gpu_resident:
-                train_loader = train_loader()
-                val_loader = val_loader()
+                # Keep factory functions; call them fresh each epoch
+                # to avoid exhausting one-shot generators after epoch 1
+                train_factory = train_loader
+                val_factory = val_loader
             else:
                 train_loader = DeviceDataLoader(train_loader, device)
                 val_loader = DeviceDataLoader(val_loader, device)
@@ -525,8 +527,16 @@ class TrainingEngine:
                 if self._stop_event.is_set():
                     break
 
+                # GPU-resident generators are one-shot; create fresh each epoch
+                if is_gpu_resident:
+                    epoch_train_loader = train_factory()
+                    epoch_val_loader = val_factory()
+                else:
+                    epoch_train_loader = train_loader
+                    epoch_val_loader = val_loader
+
                 epoch_loss, epoch_acc, step_count, progress_events = self._train_one_epoch(
-                    model, train_loader, criterion, optimizer, device, epoch, epochs, total_steps, step_count, start_time
+                    model, epoch_train_loader, criterion, optimizer, device, epoch, epochs, total_steps, step_count, start_time
                 )
 
                 for evt in progress_events:
@@ -535,7 +545,7 @@ class TrainingEngine:
                 if self._stop_event.is_set():
                     break
 
-                val_loss, val_acc = self._evaluate_model(model, val_loader, criterion, device)
+                val_loss, val_acc = self._evaluate_model(model, epoch_val_loader, criterion, device)
 
                 if scheduler is not None and str(config.get("scheduler", "none")) != "none":
                     if config.get("scheduler") == "reduce_on_plateau":
