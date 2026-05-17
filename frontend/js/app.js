@@ -11,11 +11,15 @@ class App {
         this._trainingActive = false;
         this._trainingState = null; // 'running' | 'complete' | 'error' | null
         this._trainingCompleted = false;
+        this._backendOnline = false;
+        this._availableDevices = ['cpu'];
+        this._backendCheckInterval = null;
         
         window.app = this;
         
         this.init();
         this.loadFromLocalStorage();
+        this.checkBackend();
     }
     
     loadFromLocalStorage() {
@@ -45,7 +49,112 @@ class App {
             console.error('Failed to save session to localStorage:', error);
         }
     }
-    
+
+    async checkBackend() {
+        this.setBackendStatus('checking');
+        try {
+            const res = await fetch('http://localhost:8000/health', { signal: AbortSignal.timeout(3000) });
+            if (!res.ok) throw new Error('Not OK');
+            this._backendOnline = true;
+            this.setBackendStatus('online');
+            this.enableBackendButtons(true);
+            await this.queryDevices();
+        } catch (e) {
+            this._backendOnline = false;
+            this.setBackendStatus('offline');
+            this.enableBackendButtons(false);
+            this.filterDeviceDropdown();
+        }
+        this.scheduleBackendCheck();
+    }
+
+    scheduleBackendCheck() {
+        if (this._backendCheckInterval) clearInterval(this._backendCheckInterval);
+        this._backendCheckInterval = setInterval(() => this.checkBackend(), 30000);
+    }
+
+    setBackendStatus(status) {
+        const dot = document.getElementById('backendDot');
+        const label = document.getElementById('backendLabel');
+        if (!dot || !label) return;
+        dot.className = 'backend-dot ' + status;
+        const statusTexts = {
+            online: 'Backend Online',
+            offline: 'Backend Offline',
+            checking: 'Checking...'
+        };
+        label.textContent = statusTexts[status] || status;
+    }
+
+    enableBackendButtons(enabled) {
+        const btnIds = ['trainBtn', 'evaluateBtn', 'datasetBtn', 'weightsBtn'];
+        btnIds.forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) {
+                btn.disabled = !enabled;
+                btn.classList.toggle('disabled', !enabled);
+                btn.title = enabled
+                    ? btn.dataset.originalTitle || ''
+                    : 'Backend server unavailable — start the backend to use this feature';
+            }
+        });
+    }
+
+    async queryDevices() {
+        try {
+            const res = await fetch('http://localhost:8000/devices', { signal: AbortSignal.timeout(3000) });
+            const data = await res.json();
+            this._availableDevices = (data.devices || [])
+                .filter(d => d.available)
+                .map(d => d.id);
+            this.filterDeviceDropdown();
+        } catch (e) {
+            this._availableDevices = ['cpu'];
+            this.filterDeviceDropdown();
+        }
+    }
+
+    filterDeviceDropdown() {
+        const select = document.getElementById('deviceSelect');
+        if (!select) return;
+
+        const allOptions = {
+            cpu:  { label: 'CPU',                     backend: 'cpu' },
+            cuda: { label: 'GPU (NVIDIA CUDA)',        backend: 'cuda' },
+            rocm: { label: 'GPU (AMD ROCm)',           backend: 'rocm' },
+            xpu:  { label: 'GPU (Intel XPU)',          backend: 'xpu' },
+            mps:  { label: 'GPU (Apple MPS)',          backend: 'mps' },
+        };
+
+        const available = this._backendOnline ? this._availableDevices : ['cpu'];
+        const currentValue = select.value;
+
+        select.innerHTML = '';
+        Object.entries(allOptions).forEach(([value, opt]) => {
+            const isAvail = available.includes(value);
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = opt.label;
+            option.disabled = !isAvail;
+            if (isAvail && !currentValue) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+
+        if (currentValue && available.includes(currentValue)) {
+            select.value = currentValue;
+        } else if (available.length > 0) {
+            select.value = available[0];
+        }
+
+        if (!this._backendOnline) {
+            select.title = 'Backend offline — only CPU available';
+        } else {
+            select.title = '';
+        }
+    }
+
     init() {
         this.setupEventListeners();
         this.setupCategoryToggles();
