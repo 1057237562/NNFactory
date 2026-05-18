@@ -37,19 +37,13 @@ def is_rocm_available() -> bool:
 
 
 def is_xpu_available() -> bool:
-    """Check if Intel XPU (via IPEX) is available.
+    """Check if Intel XPU is available.
 
-    IPEX is imported lazily inside this function to avoid errors
-    when the package is not installed.
+    XPU support is built into PyTorch (IPEX was retired and merged).
 
     Returns:
-        True if IPEX is installed and an XPU device is available, False otherwise.
+        True if an XPU device is available, False otherwise.
     """
-    try:
-        import intel_extension_for_pytorch  # noqa: F401
-    except ImportError:
-        return False
-
     try:
         return torch.xpu.is_available()
     except (AttributeError, RuntimeError):
