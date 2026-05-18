@@ -172,19 +172,35 @@ class TrainingEngine:
     def _check_gpu_memory(tensor_size_bytes: int, device: str = "cuda") -> bool:
         """Check if enough GPU memory is available for a tensor of given size.
 
+        Supports CUDA, ROCm, XPU, and MPS backends.
         Returns True if estimated memory (2x tensor_size for forward/backward buffers)
-        fits in available VRAM. Returns False if CUDA is unavailable or memory insufficient.
+        fits in available VRAM. Returns False if the device is unavailable or memory insufficient.
         """
-        if not torch.cuda.is_available():
-            return False
-        try:
-            total = torch.cuda.get_device_properties(0).total_memory
-            allocated = torch.cuda.memory_allocated(0)
-            available = total - allocated
-            # Require 2x dataset size for forward + backward buffers
-            return tensor_size_bytes * 2 < available
-        except Exception:
-            return False
+        if device == "xpu":
+            try:
+                if not torch.xpu.is_available():
+                    return False
+                total = torch.xpu.get_device_properties(0).total_memory
+                allocated = torch.xpu.memory_allocated(0)
+                available = total - allocated
+                return tensor_size_bytes * 2 < available
+            except Exception:
+                return False
+        elif device == "mps":
+            try:
+                return torch.backends.mps.is_available()
+            except Exception:
+                return False
+        else:
+            if not torch.cuda.is_available():
+                return False
+            try:
+                total = torch.cuda.get_device_properties(0).total_memory
+                allocated = torch.cuda.memory_allocated(0)
+                available = total - allocated
+                return tensor_size_bytes * 2 < available
+            except Exception:
+                return False
 
     def _create_synthetic_dataset(self, config: dict[str, Any]) -> tuple[DataLoader[tuple[torch.Tensor, ...]], DataLoader[tuple[torch.Tensor, ...]], int]:
         input_size = config.get("input_size", [3, 224, 224])
@@ -420,7 +436,7 @@ class TrainingEngine:
             x_tensor = torch.tensor(x_normalized, dtype=torch.float32)
             y_tensor = torch.tensor(y, dtype=torch.long)
 
-            if resolve_device(device) == "cuda":
+            if resolve_device(device) in ("cuda", "xpu", "mps"):
                 return self._create_gpu_resident_loaders(ds_info, config, device)
 
             dataset = TensorDataset(x_tensor, y_tensor)
