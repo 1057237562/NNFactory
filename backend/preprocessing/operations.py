@@ -703,7 +703,7 @@ def _export_dataset(self):
     self.metadata["transformations"] = self.transformations_applied
     self.metadata["processed_at"] = datetime.now().isoformat()
 
-    from ..preprocessing_metadata import PreprocessingMetadata
+    from .metadata import PreprocessingMetadata
 
     new_info: dict[str, Any] = {
         "id": new_id,

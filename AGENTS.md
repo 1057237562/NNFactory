@@ -11,20 +11,67 @@ NNFactory is a visual neural network blueprint maker with a PyTorch backend. Use
 ```
 NNFactory/
 ├── backend/
-│   ├── main.py              # FastAPI server, Pydantic models, routes
-│   ├── code_generator.py    # Blueprint-to-PyTorch code generation engine
-│   └── requirements.txt     # Python dependencies
+│   ├── main.py                  # FastAPI server, Pydantic models, routes
+│   ├── code_generator.py        # Blueprint-to-PyTorch code generation engine
+│   ├── device_utils.py          # Hardware backend detection
+│   ├── evaluator.py             # Model evaluation logic
+│   ├── requirements.txt         # Python dependencies
+│   ├── models/
+│   │   ├── __init__.py
+│   │   └── blueprint.py         # Blueprint parsing & validation
+│   ├── datasets/
+│   │   ├── __init__.py
+│   │   ├── info.py              # Dataset metadata extraction
+│   │   ├── manager.py           # Dataset CRUD operations
+│   │   └── stats.py             # Dataset statistics
+│   ├── training/
+│   │   ├── __init__.py
+│   │   ├── dataloader.py        # Data loading utilities
+│   │   └── engine.py            # Training loop engine
+│   └── preprocessing/
+│       ├── __init__.py
+│       ├── operations.py        # Preprocessing operations
+│       └── pipeline.py          # Pipeline execution engine
 ├── frontend/
-│   ├── index.html           # Main HTML entry point
-│   ├── css/style.css        # All styles (CSS custom properties, dark theme)
+│   ├── index.html               # Main HTML entry point
+│   ├── css/
+│   │   ├── base.css             # CSS custom properties, reset, body defaults
+│   │   ├── layout.css           # App shell, header, sidebar, properties panel
+│   │   ├── components.css       # Buttons, toggles, inputs, toasts, forms
+│   │   ├── canvas.css           # Canvas container, nodes, connections
+│   │   ├── modals.css           # Modal overlays, code modals
+│   │   ├── training.css         # Training config, progress, status bar
+│   │   ├── evaluator.css        # Evaluation UI, metrics, predictions
+│   │   ├── dataset-manager.css  # Dataset manager base styles
+│   │   ├── dataset-manager-pagination.css  # Dataset lists, previews, image grids
+│   │   ├── dataset-manager-buttons.css     # Dataset button/toolbar/legacy styles
+│   │   ├── dataset-viz.css      # Dataset visualization stats, bar charts, tags
+│   │   ├── dataset-viz-charts.css          # Chart-specific viz (relations, dist bars)
+│   │   ├── preprocessing.css    # Preprocessing pipeline blueprint
+│   │   └── weights.css          # Weights list and management
+│   ├── html/
+│   │   ├── sidebar-layers.html  # Sidebar layer category template
+│   │   └── modals/              # Modal HTML partials (loaded dynamically)
 │   └── js/
-│       ├── app.js           # Application entry, event orchestration
-│       ├── canvas.js        # CanvasManager: zoom, pan, grid rendering
-│       ├── nodes.js         # NodeManager: drag-drop, create, delete nodes
-│       ├── connections.js   # ConnectionManager: bezier curve connections
-│       ├── properties.js    # PropertiesPanel: layer parameter editing
-│       └── codegen.js       # CodeGenerator: frontend fallback code gen
-├── start.bat                # Windows one-click startup
+│       ├── app.js               # Application entry, event orchestration
+│       ├── canvas.js            # CanvasManager: zoom, pan, grid rendering
+│       ├── nodes.js             # NodeManager: drag-drop, create, delete nodes
+│       ├── connections.js       # ConnectionManager: bezier curve connections
+│       ├── properties.js        # PropertiesPanel: layer parameter editing
+│       ├── codegen.js           # CodeGenerator: frontend fallback code gen
+│       ├── utils.js             # Shared utility functions
+│       ├── path-utils.js        # Blueprint path extraction utilities
+│       ├── layer-config.js      # Layer type configuration definitions
+│       ├── modal-loader.js      # Dynamic modal HTML loading
+│       ├── training-chart.js    # Training loss/accuracy charting
+│       ├── training-ui.js       # Training modal UI and controls
+│       ├── weights-ui.js        # Weights modal UI and management
+│       ├── evaluator-ui.js      # Evaluation UI and prediction display
+│       └── dataset/
+│           ├── dataset-manager.js  # Dataset manager UI logic
+│           ├── dataset-viz.js      # Dataset visualization UI
+│           └── pp-blueprint.js     # Preprocessing blueprint editor
+├── start.bat                  # Windows one-click startup
 └── README.md
 ```
 

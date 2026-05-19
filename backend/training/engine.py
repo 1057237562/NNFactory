@@ -11,7 +11,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
-from ..preprocessing_metadata import PreprocessingMetadata
+from ..preprocessing.metadata import PreprocessingMetadata
 from ..device_utils import (
     resolve_device,
     get_device_name,

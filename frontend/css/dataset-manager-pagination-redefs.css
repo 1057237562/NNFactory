@@ -1,0 +1,544 @@
+/* Dataset Manager Full */
+.ds-full-manager {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.ds-main-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 0;
+    min-height: 600px;
+}
+
+.ds-sidebar {
+    background: var(--bg-tertiary);
+    border-right: 1px solid var(--border-color);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+}
+
+.ds-sidebar-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.ds-count {
+    font-size: 10px;
+    background: var(--accent-primary);
+    color: white;
+    padding: 1px 6px;
+    border-radius: 10px;
+    margin-left: 6px;
+}
+
+/* Upload Tabs */
+.ds-upload-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+    background: var(--bg-primary);
+    border-radius: var(--radius-sm);
+    padding: 3px;
+}
+
+.ds-upload-tab {
+    flex: 1;
+    padding: 6px 10px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.ds-upload-tab.active {
+    background: var(--accent-primary);
+    color: white;
+}
+
+.ds-upload-tab:hover:not(.active) {
+    color: var(--text-primary);
+}
+
+.ds-upload-content {
+    display: none;
+}
+
+.ds-upload-content.active {
+    display: block;
+}
+
+/* Dataset List */
+.ds-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.ds-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.ds-card:hover {
+    border-color: var(--accent-primary);
+}
+
+.ds-card.selected {
+    border-color: var(--accent-primary);
+    background: rgba(99, 102, 241, 0.1);
+}
+
+.ds-card-icon {
+    color: var(--accent-primary);
+    flex-shrink: 0;
+}
+
+.ds-card-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.ds-card-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ds-card-meta {
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+.ds-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.ds-empty svg {
+    margin-bottom: 12px;
+    opacity: 0.3;
+}
+
+.ds-empty p {
+    font-size: 12px;
+}
+
+/* Content Area */
+.ds-content {
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.ds-welcome {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 400px;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.ds-welcome svg {
+    margin-bottom: 16px;
+    opacity: 0.2;
+}
+
+.ds-welcome h3 {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+/* Upload Panel */
+.ds-upload-panel {
+    padding: 16px;
+}
+
+.ds-upload-panel h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+}
+
+.ds-upload-dropzone {
+    border: 2px dashed var(--border-light);
+    border-radius: var(--radius-md);
+    padding: 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.ds-upload-dropzone:hover {
+    border-color: var(--accent-primary);
+    background: rgba(99, 102, 241, 0.05);
+}
+
+.ds-upload-dropzone svg {
+    margin-bottom: 12px;
+    color: var(--text-muted);
+}
+
+.ds-upload-dropzone p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.ds-upload-sub {
+    font-size: 12px;
+    color: var(--text-muted) !important;
+}
+
+/* Dataset View */
+.ds-view {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.ds-view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.ds-view-header h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.ds-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.ds-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.ds-badge.type {
+    border-color: rgba(99, 102, 241, 0.3);
+    color: var(--accent-primary);
+}
+
+.ds-badge.samples {
+    border-color: rgba(34, 197, 94, 0.3);
+    color: var(--accent-success);
+}
+
+.ds-badge.classes {
+    border-color: rgba(245, 158, 11, 0.3);
+    color: var(--accent-warning);
+}
+
+.ds-badge.shape {
+    border-color: rgba(168, 85, 247, 0.3);
+    color: var(--accent-tertiary);
+}
+
+/* Info Panel */
+.ds-info-panel {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.ds-info-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+}
+
+.ds-info-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.ds-info-value {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.ds-info-value.text {
+    font-family: inherit;
+    font-size: 12px;
+}
+
+/* Target Selector */
+.ds-target-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 2px;
+}
+
+.ds-target-select {
+    flex: 1;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    cursor: pointer;
+    transition: border-color var(--transition-fast);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='%23a0a0b8'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    padding-right: 28px;
+}
+
+.ds-target-select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.ds-target-select option {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.ds-target-apply-btn {
+    padding: 6px 14px;
+    background: var(--accent-primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background var(--transition-fast);
+}
+
+.ds-target-apply-btn:hover {
+    background: var(--accent-secondary);
+}
+
+.ds-target-apply-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.ds-target-status {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    white-space: nowrap;
+}
+
+.ds-target-status.success {
+    color: var(--accent-success);
+}
+
+.ds-target-status.error {
+    color: var(--accent-danger);
+}
+
+/* Tabs */
+.ds-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0;
+}
+
+.ds-tab {
+    padding: 8px 16px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    margin-bottom: -1px;
+}
+
+.ds-tab:hover {
+    color: var(--text-primary);
+}
+
+.ds-tab.active {
+    color: var(--text-primary);
+    border-bottom-color: var(--accent-primary);
+    background: rgba(99, 102, 241, 0.08);
+}
+
+.ds-panels {
+    padding-top: 16px;
+}
+
+.ds-panel {
+    display: none;
+}
+
+.ds-panel.active {
+    display: block;
+}
+
+/* Preview */
+.preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.preview-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-tertiary);
+}
+
+.preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+}
+
+.preview-table th {
+    background: var(--bg-card);
+    padding: 8px 10px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+}
+
+.preview-table td {
+    padding: 6px 10px;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.preview-table tr:hover td {
+    background: var(--bg-hover);
+}
+
+/* Image Grid */
+.ds-image-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+}
+
+.ds-image-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    transition: all var(--transition-fast);
+}
+
+.ds-image-card:hover {
+    border-color: var(--accent-primary);
+    transform: translateY(-1px);
+}
+
+.ds-image-card img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    display: block;
+}
+
+.ds-image-placeholder {
+    width: 100%;
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-card);
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+.ds-image-info {
+    padding: 6px;
+}
+
+.ds-image-name {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ds-image-class {
+    font-size: 9px;
+    color: var(--accent-primary);
+}
+
+.ds-image-meta {
+    font-size: 9px;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+}

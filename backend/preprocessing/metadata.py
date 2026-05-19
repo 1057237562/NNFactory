@@ -25,14 +25,11 @@ class PreprocessingMetadata:
     label_column: Optional[str] = None
 
     # ---- Tabular: normalisation stats (per-column) ----
-    # Computed from the *training* split so evaluation uses the same transform.
     is_normalized: bool = False
-    normalization_mean: list[float] = field(default_factory=list)  # one per numeric col
-    normalization_std: list[float] = field(default_factory=list)   # one per numeric col
+    normalization_mean: list[float] = field(default_factory=list)
+    normalization_std: list[float] = field(default_factory=list)
 
-    # ---- Tabular: encoding maps (serialised as plain dicts) ----
-    # These mirror the maps stored in ``DatasetInfo.metadata`` by
-    # ``PreprocessingPipeline``.
+    # ---- Tabular: encoding maps ----
     one_hot_encoders: dict[str, Any] = field(default_factory=dict)
     label_encoders: dict[str, Any] = field(default_factory=dict)
     ordinal_encoders: dict[str, Any] = field(default_factory=dict)
@@ -72,11 +69,9 @@ class PreprocessingMetadata:
 
     @staticmethod
     def _meta_path(weights_path: str) -> str:
-        """Derive the companion metadata path from a ``.pth`` weights path."""
         return weights_path + ".meta.json"
 
     def save(self, weights_path: str) -> str:
-        """Write this metadata as a JSON sidecar next to *weights_path*."""
         meta_path = self._meta_path(weights_path)
         with open(meta_path, "w", encoding="utf-8") as f:
             json.dump(self.to_dict(), f, indent=2, ensure_ascii=False)
@@ -84,10 +79,6 @@ class PreprocessingMetadata:
 
     @classmethod
     def load(cls, weights_path: str) -> Optional["PreprocessingMetadata"]:
-        """Load the companion metadata sidecar for *weights_path*.
-
-        Returns ``None`` when the sidecar does not exist (legacy weights).
-        """
         meta_path = cls._meta_path(weights_path)
         if not os.path.exists(meta_path):
             return None
@@ -100,6 +91,5 @@ class PreprocessingMetadata:
 
     @classmethod
     def from_weights_filename(cls, weights_filename: str, temp_dir: str) -> Optional["PreprocessingMetadata"]:
-        """Convenience: look up metadata for a weights *filename* in *temp_dir*."""
         weights_path = os.path.join(temp_dir, weights_filename)
         return cls.load(weights_path)

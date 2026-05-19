@@ -1,0 +1,317 @@
+/* Dataset Manager Legacy */
+.dataset-manager {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.dataset-upload-section {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 16px;
+}
+
+.dataset-section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dataset-count {
+    background: var(--accent-primary);
+    color: white;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.dataset-upload-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+    background: var(--bg-primary);
+    border-radius: var(--radius-sm);
+    padding: 3px;
+}
+
+.dataset-tab {
+    flex: 1;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.dataset-tab.active {
+    background: var(--accent-primary);
+    color: white;
+}
+
+.dataset-tab:hover:not(.active) {
+    color: var(--text-primary);
+}
+
+.dataset-upload-panel {
+    display: none;
+}
+
+.dataset-upload-panel.active {
+    display: block;
+}
+
+.dataset-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.dataset-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.dataset-card:hover {
+    border-color: var(--accent-primary);
+}
+
+.dataset-card.selected {
+    border-color: var(--accent-primary);
+    background: rgba(99, 102, 241, 0.1);
+}
+
+.dataset-card-icon {
+    color: var(--accent-primary);
+    flex-shrink: 0;
+}
+
+.dataset-card-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.dataset-card-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dataset-card-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.dataset-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.dataset-empty svg {
+    margin-bottom: 12px;
+    opacity: 0.3;
+}
+
+.dataset-empty p {
+    font-size: 13px;
+}
+
+.dataset-view {
+    display: none;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.dataset-view.active {
+    display: flex;
+}
+
+.dataset-view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dataset-view-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.dataset-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.dataset-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.dataset-info-panel {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+}
+
+.dataset-info-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+}
+
+.dataset-info-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.dataset-info-value {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.dataset-info-value.text {
+    font-family: inherit;
+    font-size: 12px;
+}
+
+.dataset-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.dataset-tab-btn {
+    padding: 8px 16px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    margin-bottom: -1px;
+}
+
+.dataset-tab-btn:hover {
+    color: var(--text-primary);
+}
+
+.dataset-tab-btn.active {
+    color: var(--accent-primary);
+    border-bottom-color: var(--accent-primary);
+}
+
+.dataset-panel {
+    display: none;
+    padding-top: 16px;
+}
+
+.dataset-panel.active {
+    display: block;
+}
+
+.dataset-image-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+}
+
+.dataset-image-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    transition: all var(--transition-fast);
+}
+
+.dataset-image-card:hover {
+    border-color: var(--accent-primary);
+    transform: translateY(-1px);
+}
+
+.dataset-image-card img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    display: block;
+}
+
+.dataset-image-placeholder {
+    width: 100%;
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-card);
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+.dataset-image-info {
+    padding: 6px;
+}
+
+.dataset-image-name {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dataset-image-class {
+    font-size: 9px;
+    color: var(--accent-primary);
+}
+
+.dataset-image-size,
+.dataset-image-dims {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+}

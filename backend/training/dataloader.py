@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader, TensorDataset, Dataset
 from torchvision import transforms
 from PIL import Image
 
-from ..preprocessing_metadata import PreprocessingMetadata
+from ..preprocessing.metadata import PreprocessingMetadata
 from ..device_utils import resolve_device
 
 
