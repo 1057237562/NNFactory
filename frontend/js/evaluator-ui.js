@@ -107,7 +107,6 @@ class EvaluatorUI {
     }
 
     open() {
-        console.log('EvaluatorUI.open() - fix loaded (split-map-join)');
         this.blueprint = window.app.getBlueprint();
 
         if (!this.blueprint || this.blueprint.layers.length === 0) {
@@ -157,7 +156,6 @@ class EvaluatorUI {
             else if (this.modelType === 'tabular') this.typeBadge.classList.add('tabular');
             else this.typeBadge.classList.add('unknown');
 
-            console.log('DetectModelType: type=', this.modelType);
             this.tabs.forEach(tab => {
                 const t = tab.dataset.evalTab;
                 if (this.modelType === 'image') {
@@ -167,19 +165,14 @@ class EvaluatorUI {
                 } else {
                     tab.style.display = '';
                 }
-                console.log(`  tab[${t}].style.display = ${tab.style.display}`);
             });
 
             const firstVisible = Array.from(this.tabs).find(t => t.style.display !== 'none');
-            console.log('First visible tab:', firstVisible?.dataset?.evalTab);
             if (firstVisible) {
                 this.tabs.forEach(t => t.classList.remove('active'));
                 firstVisible.classList.add('active');
                 this.tabContents.forEach(tc => tc.classList.remove('active'));
-                const panelId = `evalPanel${firstVisible.dataset.evalTab.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('')}`;
-                console.log('Looking for panel:', panelId);
-                const panel = document.getElementById(panelId);
-                console.log('Panel found:', !!panel, panel?.id);
+                const panel = document.getElementById(`evalPanel${firstVisible.dataset.evalTab.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('')}`);
                 if (panel) panel.classList.add('active');
             }
 
