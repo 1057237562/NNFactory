@@ -1,0 +1,16 @@
+Task 8: Extract TrainingChart class from app.js into training-chart.js
+===============================================================
+
+Completed: Yes
+
+Changes made:
+1. Created frontend/js/training-chart.js (90 lines) — contains the complete TrainingChart class
+2. Removed TrainingChart class (lines 936-1025) from frontend/js/app.js
+3. Added <script src="js/training-chart.js"> before app.js in frontend/index.html
+
+Verification:
+- app.js now ends at 937 lines (was 1029), with TrainingChart removed
+- training-chart.js contains all 5 methods: constructor, resize, update, drawChart, drawLines, drawLine
+- Script order: ...evaluator-ui.js → training-chart.js → app.js
+- app.js still references: new TrainingChart('trainChart') (line 610), _trainChart.update() (lines 713, 752), _trainChart = null (line 560)
+- No module imports needed — class is global in both locations

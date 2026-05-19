@@ -1,0 +1,48 @@
+Task 9: Extract training-related and weights-related methods from app.js
+=====================================================================
+
+## Files Created
+- `frontend/js/training-ui.js` (295 lines) - TrainingManager class
+- `frontend/js/weights-ui.js` (138 lines) - WeightsManager class
+
+## Files Modified
+- `frontend/js/app.js` - Removed training/weights methods, added manager inits
+- `frontend/index.html` - Added script tags for training-ui.js and weights-ui.js
+
+## TrainingManager (training-ui.js)
+Constructor receives `app` reference, initializes 8 training properties:
+- _trainingActive, _trainingState, _trainingCompleted
+- _trainHistory, _trainChart, _trainLog, _trainAbortController, _weightsFilename
+
+15 methods extracted:
+- openTrainModal(), populateDatasetSelector(), updateSyntheticFields()
+- closeTrainModal(), setupTrainingStatusBar(), showTrainingStatusBar()
+- hideTrainingStatusBar(), updateTrainingStatusBar(), restoreTrainModal()
+- resetTrainModal(), startTraining(), stopTraining(), handleTrainEvent()
+- addTrainLog(), formatTime()
+
+Internal this.xxx calls preserved; external App calls use this.app.xxx().
+
+## WeightsManager (weights-ui.js)
+7 methods extracted:
+- exportWeights(), openWeightsModal(), closeWeightsModal()
+- loadWeightsList(), downloadWeight(), deleteWeight(), purgeWeights()
+
+_weightsFilename accessed via this.app.training._weightsFilename.
+showToast() calls use this.app.showToast().
+
+## App.js Changes
+- Removed 3 training properties (_trainingActive, _trainingState, _trainingCompleted) from constructor
+- Added: this.training = new TrainingManager(this), this.weights = new WeightsManager(this)
+- init(): setupTrainingStatusBar() → this.training.setupTrainingStatusBar()
+- Event listeners updated with this.training.xxx() / this.weights.xxx() for all training/weights
+- Overlay click and Escape key handlers updated similarly
+- TrainingChart class already extracted to training-chart.js by previous task
+
+## Script Load Order
+training-chart.js → training-ui.js → weights-ui.js → app.js
+
+## Verification
+- LSP diagnostics: 0 errors across all 3 JS files
+- window.app.training and window.app.weights accessible from console
+- No method logic changed; all cross-references updated to this.app.xxx()
