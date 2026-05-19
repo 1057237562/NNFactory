@@ -51,7 +51,7 @@ class EvaluatorUI {
                 this.tabs.forEach(t => t.classList.remove('active'));
                 e.currentTarget.classList.add('active');
                 this.tabContents.forEach(tc => tc.classList.remove('active'));
-                const panel = document.getElementById(`evalPanel${target.charAt(0).toUpperCase()}${target.slice(1)}`);
+                const panel = document.getElementById(`evalPanel${target.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('')}`);
                 if (panel) panel.classList.add('active');
             });
         });
@@ -172,7 +172,7 @@ class EvaluatorUI {
                 this.tabs.forEach(t => t.classList.remove('active'));
                 firstVisible.classList.add('active');
                 this.tabContents.forEach(tc => tc.classList.remove('active'));
-                const panel = document.getElementById(`evalPanel${firstVisible.dataset.tab.charAt(0).toUpperCase()}${firstVisible.dataset.tab.slice(1)}`);
+                const panel = document.getElementById(`evalPanel${firstVisible.dataset.tab.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('')}`);
                 if (panel) panel.classList.add('active');
             }
 
