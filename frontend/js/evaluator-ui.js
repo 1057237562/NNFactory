@@ -47,7 +47,7 @@ class EvaluatorUI {
 
         this.tabs.forEach(tab => {
             tab.addEventListener('click', (e) => {
-                const target = e.currentTarget.dataset.tab;
+                const target = e.currentTarget.dataset.evalTab;
                 this.tabs.forEach(t => t.classList.remove('active'));
                 e.currentTarget.classList.add('active');
                 this.tabContents.forEach(tc => tc.classList.remove('active'));
@@ -159,7 +159,7 @@ class EvaluatorUI {
 
             console.log('DetectModelType: type=', this.modelType);
             this.tabs.forEach(tab => {
-                const t = tab.dataset.tab;
+                const t = tab.dataset.evalTab;
                 if (this.modelType === 'image') {
                     tab.style.display = t === 'image' ? '' : 'none';
                 } else if (this.modelType === 'tabular') {
@@ -171,12 +171,12 @@ class EvaluatorUI {
             });
 
             const firstVisible = Array.from(this.tabs).find(t => t.style.display !== 'none');
-            console.log('First visible tab:', firstVisible?.dataset?.tab);
+            console.log('First visible tab:', firstVisible?.dataset?.evalTab);
             if (firstVisible) {
                 this.tabs.forEach(t => t.classList.remove('active'));
                 firstVisible.classList.add('active');
                 this.tabContents.forEach(tc => tc.classList.remove('active'));
-                const panelId = `evalPanel${firstVisible.dataset.tab.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('')}`;
+                const panelId = `evalPanel${firstVisible.dataset.evalTab.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('')}`;
                 console.log('Looking for panel:', panelId);
                 const panel = document.getElementById(panelId);
                 console.log('Panel found:', !!panel, panel?.id);
