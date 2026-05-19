@@ -14,6 +14,7 @@ from training_engine import TrainingEngine
 from dataset_manager import DatasetManager
 from preprocessing_pipeline import PreprocessingPipeline, PreprocessingResult
 from device_utils import is_cuda_available, is_rocm_available, is_xpu_available, is_mps_available
+from evaluator import CustomEvaluator
 
 app = FastAPI(title="NNFactory Backend", version="1.0.0")
 executor = ThreadPoolExecutor(max_workers=4)
@@ -69,6 +70,11 @@ class EvalConfig(BaseModel):
     val_ratio: float = 0.2
     loss_function: str = "cross_entropy"
     device: str = "cpu"
+
+class SingleRowInput(BaseModel):
+    blueprint: Blueprint
+    values: list[float]
+    weights_filename: Optional[str] = None
 
 class TrainWithDatasetConfig(BaseModel):
     blueprint: Blueprint
@@ -151,8 +157,8 @@ async def stop_training():
         engine.stop_training()
     return {"status": "stopped"}
 
-@app.post("/evaluate")
-async def evaluate_model(config: EvalConfig):
+@app.post("/evaluate/synthetic")
+async def evaluate_synthetic(config: EvalConfig):
     generator = CodeGenerator(config.blueprint)
     engine = TrainingEngine(config.blueprint, generator)
 
@@ -167,6 +173,126 @@ async def evaluate_model(config: EvalConfig):
 
     result = engine.evaluate(eval_config)
     return result
+
+@app.post("/evaluate/detect-type")
+async def detect_model_type(blueprint: Blueprint):
+    try:
+        evaluator = CustomEvaluator(blueprint)
+        result = evaluator.detect_type()
+        weights_dir = CustomEvaluator.TEMP_DIR
+        weights_available = False
+        weights_list = []
+        if os.path.exists(weights_dir):
+            for f in sorted(os.listdir(weights_dir)):
+                if f.endswith(".pth"):
+                    weights_available = True
+                    path = os.path.join(weights_dir, f)
+                    weights_list.append({
+                        "filename": f,
+                        "size": os.path.getsize(path)
+                    })
+        return {
+            **result,
+            "weights_available": weights_available,
+            "weights_list": weights_list
+        }
+    except ValueError as e:
+        return {"type": "unknown", "input_shape": [], "num_classes": 0, "valid": False, "error": str(e)}
+
+@app.post("/evaluate/image")
+async def evaluate_images(
+    blueprint: str = Form(...),
+    weights_filename: Optional[str] = Form(None),
+    top_k: int = Form(5),
+    images: list[UploadFile] = File(...),
+):
+    if len(images) > 50:
+        return {"valid": False, "errors": ["Maximum 50 images per request"]}
+
+    try:
+        bp = Blueprint(**json.loads(blueprint))
+    except Exception as e:
+        return {"valid": False, "errors": [f"Invalid blueprint: {str(e)}"]}
+
+    evaluator = CustomEvaluator(bp)
+
+    if weights_filename:
+        weights_path = os.path.join(CustomEvaluator.TEMP_DIR, weights_filename)
+        result = evaluator.load_weights(weights_path)
+        if not result.get("valid", True):
+            return result
+
+    temp_dir = tempfile.mkdtemp()
+    try:
+        image_paths = []
+        for img in images:
+            content = await img.read()
+            path = os.path.join(temp_dir, img.filename or "image.png")
+            with open(path, "wb") as f:
+                f.write(content)
+            image_paths.append(path)
+
+        result = evaluator.evaluate_images(image_paths, top_k)
+        return result
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+@app.post("/evaluate/tabular")
+async def evaluate_tabular_csv(
+    blueprint: str = Form(...),
+    weights_filename: Optional[str] = Form(None),
+    file: UploadFile = File(...),
+):
+    if not file.filename or not file.filename.endswith(".csv"):
+        return {"valid": False, "errors": ["File must be a CSV"]}
+
+    try:
+        bp = Blueprint(**json.loads(blueprint))
+    except Exception as e:
+        return {"valid": False, "errors": [f"Invalid blueprint: {str(e)}"]}
+
+    evaluator = CustomEvaluator(bp)
+
+    if weights_filename:
+        weights_path = os.path.join(CustomEvaluator.TEMP_DIR, weights_filename)
+        wresult = evaluator.load_weights(weights_path)
+        if not wresult.get("valid", True):
+            return wresult
+
+    temp_dir = tempfile.mkdtemp()
+    try:
+        content = await file.read()
+        csv_path = os.path.join(temp_dir, file.filename)
+        with open(csv_path, "wb") as f:
+            f.write(content)
+
+        result = evaluator.evaluate_tabular_csv(csv_path)
+        if not result.get("valid", True):
+            return result
+
+        return FileResponse(
+            result["output_path"],
+            media_type="text/csv",
+            filename=f"eval_{file.filename}"
+        )
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+@app.post("/evaluate/tabular/single")
+async def evaluate_tabular_single(input_data: SingleRowInput):
+    try:
+        evaluator = CustomEvaluator(input_data.blueprint)
+
+        if input_data.weights_filename:
+            weights_path = os.path.join(CustomEvaluator.TEMP_DIR, input_data.weights_filename)
+            wresult = evaluator.load_weights(weights_path)
+            if not wresult.get("valid", True):
+                return wresult
+
+        result = evaluator.evaluate_tabular_single(input_data.values)
+        return result
+    except ValueError as e:
+        return {"valid": False, "errors": [str(e)]}
 
 @app.get("/health")
 async def health():

@@ -1,0 +1,1 @@
+{"predictions":[{"class":0,"confidence":0.9254238605499268,"label":"Class 0"},{"class":1,"confidence":0.07457610964775085,"label":"Class 1"}],"valid":true}

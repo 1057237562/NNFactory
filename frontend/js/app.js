@@ -7,6 +7,8 @@ class App {
         this.codeGenerator = new CodeGenerator();
         this.datasetManager = new DatasetManagerUI();
         this.datasetManager.init();
+        this.evaluator = new EvaluatorUI();
+        this.evaluator.init();
 
         this._trainingActive = false;
         this._trainingState = null; // 'running' | 'complete' | 'error' | null
@@ -166,7 +168,7 @@ class App {
         document.getElementById('generateBtn').addEventListener('click', () => this.generateCode());
         document.getElementById('validateBtn').addEventListener('click', () => this.validateBlueprint());
         document.getElementById('trainBtn').addEventListener('click', () => this.openTrainModal());
-        document.getElementById('evaluateBtn').addEventListener('click', () => this.openEvalModal());
+        document.getElementById('evaluateBtn').addEventListener('click', () => this.evaluator.open());
         document.getElementById('exportBtn').addEventListener('click', () => this.exportBlueprint());
         document.getElementById('weightsBtn').addEventListener('click', () => this.openWeightsModal());
         document.getElementById('importBtn').addEventListener('click', () => document.getElementById('fileInput').click());
@@ -175,14 +177,14 @@ class App {
         
         document.getElementById('closeModal').addEventListener('click', () => this.closeCodeModal());
         document.getElementById('closeTrainModal').addEventListener('click', () => this.closeTrainModal());
-        document.getElementById('closeEvalModal').addEventListener('click', () => this.closeEvalModal());
+        document.getElementById('closeEvalModal').addEventListener('click', () => this.evaluator.close());
         document.getElementById('closeWeightsModal').addEventListener('click', () => this.closeWeightsModal());
         
         document.querySelectorAll('.modal-overlay').forEach(overlay => {
             overlay.addEventListener('click', (e) => {
                 this.closeCodeModal();
                 this.closeTrainModal();
-                this.closeEvalModal();
+                if (this.evaluator) this.evaluator.close();
                 this.closeDatasetModal();
                 this.closeWeightsModal();
             });
@@ -194,14 +196,13 @@ class App {
         document.getElementById('stopTrainingBtn').addEventListener('click', () => this.stopTraining());
         document.getElementById('trainAgainBtn').addEventListener('click', () => this.resetTrainModal());
         document.getElementById('exportWeightsBtn').addEventListener('click', () => this.exportWeights());
-        document.getElementById('startEvalBtn').addEventListener('click', () => this.startEvaluation());
         document.getElementById('purgeWeightsBtn').addEventListener('click', () => this.purgeWeights());
         
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 this.closeCodeModal();
                 this.closeTrainModal();
-                this.closeEvalModal();
+                if (this.evaluator) this.evaluator.close();
                 this.closeDatasetModal();
                 this.closeWeightsModal();
             }
@@ -920,95 +921,16 @@ class App {
     }
     
     openEvalModal() {
-        if (this.nodeManager.getNodesArray().length === 0) {
-            this.showToast('Add layers to the canvas first!', 'warning');
-            return;
-        }
-        document.getElementById('evalConfig').style.display = '';
-        document.getElementById('evalResults').style.display = 'none';
-        document.getElementById('evalModal').classList.add('active');
+        if (this.evaluator) this.evaluator.open();
     }
-    
+
     closeEvalModal() {
-        document.getElementById('evalModal').classList.remove('active');
+        if (this.evaluator) this.evaluator.close();
     }
 
     closeDatasetModal() {
         document.getElementById('datasetModal').classList.remove('active');
     }
-    
-    async startEvaluation() {
-        const blueprint = this.getBlueprint();
-        const config = {
-            blueprint,
-            input_size: [
-                parseInt(document.getElementById('evalInputC').value) || 3,
-                parseInt(document.getElementById('evalInputH').value) || 32,
-                parseInt(document.getElementById('evalInputW').value) || 32
-            ],
-            num_classes: parseInt(document.getElementById('evalNumClasses').value) || 10,
-            num_samples: parseInt(document.getElementById('evalSamples').value) || 500,
-            val_ratio: 0.2,
-            loss_function: document.getElementById('evalLoss').value
-        };
-        
-        document.getElementById('startEvalBtn').disabled = true;
-        document.getElementById('startEvalBtn').textContent = 'Evaluating...';
-        
-        try {
-            const response = await fetch('http://localhost:8000/evaluate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(config)
-            });
-            
-            const result = await response.json();
-            
-            if (result.status === 'error') {
-                this.showToast(result.message, 'error');
-                return;
-            }
-            
-            document.getElementById('evalConfig').style.display = 'none';
-            document.getElementById('evalResults').style.display = '';
-            document.getElementById('evalAccuracy').textContent = result.val_accuracy.toFixed(1) + '%';
-            document.getElementById('evalLoss').textContent = result.val_loss.toFixed(4);
-            document.getElementById('evalTotalParams').textContent = result.total_params.toLocaleString();
-            document.getElementById('evalTrainableParams').textContent = result.trainable_params.toLocaleString();
-            document.getElementById('evalNumClassesResult').textContent = result.num_classes;
-            
-            const barsContainer = document.getElementById('classBars');
-            barsContainer.innerHTML = '';
-            
-            if (result.per_class_accuracy) {
-                result.per_class_accuracy.forEach(stat => {
-                    const row = document.createElement('div');
-                    row.className = 'class-bar-row';
-                    row.innerHTML = `
-                        <span class="class-bar-label">Class ${stat.class}</span>
-                        <div class="class-bar-track">
-                            <div class="class-bar-fill" style="width: ${stat.accuracy}%"></div>
-                        </div>
-                        <span class="class-bar-value">${stat.accuracy.toFixed(1)}%</span>
-                    `;
-                    barsContainer.appendChild(row);
-                });
-            }
-            
-            this.showToast('Evaluation complete!', 'success');
-        } catch (error) {
-            this.showToast('Evaluation failed: ' + error.message, 'error');
-        } finally {
-            document.getElementById('startEvalBtn').disabled = false;
-            document.getElementById('startEvalBtn').innerHTML = `
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M11.251.068a.5.5 0 01.227.58L9.677 6.5H13a.5.5 0 01.364.843l-8 8.5a.5.5 0 01-.842-.49L6.323 9.5H3a.5.5 0 01-.364-.843l8-8.5a.5.5 0 01.615-.09z"/>
-                </svg>
-                Evaluate
-            `;
-        }
-    }
-}
 
 class TrainingChart {
     constructor(canvasId) {
