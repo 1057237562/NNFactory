@@ -246,6 +246,7 @@ class TrainingManager {
         this._trainingState = null;
         this._trainingCompleted = false;
         this.hideTrainingStatusBar();
+        this.resetTrainModal();
         this.app.showToast('Training stopped', 'info');
     }
 
