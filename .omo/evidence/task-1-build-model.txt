@@ -1,0 +1,4 @@
+Model: TestModel(
+  (n2): Linear(in_features=10, out_features=2, bias=True)
+)
+Parameters: 22

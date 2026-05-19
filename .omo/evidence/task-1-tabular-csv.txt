@@ -1,0 +1,2 @@
+Result: {'output_path': '/tmp/tmps7v2i7p4/eval_test.csv', 'valid': True}
+Output CSV: 'feat1,feat2,feat3,label,prediction\n1.0,2.0,3.0,cat,0\n4.0,5.0,6.0,dog,0\n'

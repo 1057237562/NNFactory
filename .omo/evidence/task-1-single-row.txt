@@ -1,0 +1,1 @@
+Result: {'predictions': [{'class': 1, 'confidence': 0.965933620929718, 'label': 'Class 1'}, {'class': 0, 'confidence': 0.03406636789441109, 'label': 'Class 0'}], 'valid': True}

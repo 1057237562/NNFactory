@@ -1,0 +1,1 @@
+Result: {'valid': False, 'errors': ["Architecture mismatch: missing keys ['n1.bias', 'n1.weight']", "Architecture mismatch: unexpected keys ['fake_key']"]}
