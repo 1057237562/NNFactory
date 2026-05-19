@@ -2,7 +2,7 @@ import importlib.util
 import os
 import csv
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 import numpy as np
 import torch
@@ -201,7 +201,7 @@ class CustomEvaluator:
                     img = Image.open(img_path).convert("RGB")
 
                     if type_info["type"] == "image":
-                        transform = transforms.Compose([
+                        transform: Any = transforms.Compose([
                             transforms.Resize((h, w)),
                             transforms.ToTensor(),
                             transforms.Normalize(mean=img_mean, std=img_std),

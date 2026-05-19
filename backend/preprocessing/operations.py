@@ -4,7 +4,7 @@ import csv
 import hashlib
 import time
 import numpy as np
-from typing import Any, Optional
+from typing import Any, Optional, Sequence
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 
@@ -16,7 +16,7 @@ class PreprocessingResult:
     affected_samples: int = 0
     affected_columns: int = 0
     new_dataset_id: Optional[str] = None
-    errors: list = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -205,7 +205,7 @@ def _apply_one_hot(self, params):
 
         with open(self.file_path, "r", encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)
-            headers = reader.fieldnames
+            headers = reader.fieldnames or []
             all_rows = list(reader)
 
         encoders = {}
@@ -561,7 +561,7 @@ def _apply_binary_encode(self, params):
 
         with open(self.file_path, "r", encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)
-            headers = list(reader.fieldnames)
+            headers = list(reader.fieldnames or [])
             all_rows = list(reader)
 
         encoders = {}
@@ -573,7 +573,7 @@ def _apply_binary_encode(self, params):
             values = sorted(set(row.get(col, "") for row in all_rows if row.get(col, "")))
 
             value_to_int = {v: i for i, v in enumerate(values)}
-            max_bits = len(bin(len(values) - 1))[2:] if len(values) > 1 else 1
+            max_bits = bin(len(values) - 1)[2:] if len(values) > 1 else "1"
             bit_width = max(len(max_bits), 1)
 
             encoders[col] = {"values": values, "bit_width": bit_width}
@@ -639,7 +639,7 @@ def _apply_hash_encode(self, params):
 
         with open(self.file_path, "r", encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)
-            headers = list(reader.fieldnames)
+            headers = list(reader.fieldnames or [])
             all_rows = list(reader)
 
         encoders = {}
@@ -684,7 +684,7 @@ def _apply_hash_encode(self, params):
     return {"affected_samples": 0, "affected_columns": 0}
 
 
-def _create_temp_dataset(self, headers, rows):
+def _create_temp_dataset(self, headers: list[str], rows: list[dict[str, str]]) -> str:
     dataset_id = hashlib.md5(f"processed_{self.source_id}_{time.time()}".encode()).hexdigest()[:12]
     dest_path = os.path.join(self.ds_manager.DATASETS_DIR, f"{dataset_id}.csv")
 
@@ -705,7 +705,7 @@ def _export_dataset(self):
 
     from ..preprocessing_metadata import PreprocessingMetadata
 
-    new_info = {
+    new_info: dict[str, Any] = {
         "id": new_id,
         "name": f"{self.source_info.get('name', 'dataset')}_preprocessed",
         "dataset_type": self.dataset_type,

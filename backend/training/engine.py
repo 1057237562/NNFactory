@@ -4,7 +4,7 @@ import threading
 import time
 import traceback
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 import torch
 import torch.nn as nn
@@ -165,6 +165,8 @@ class TrainingEngine:
                 return
 
             is_gpu_resident = callable(train_loader)
+            train_factory: Any = None
+            val_factory: Any = None
             if is_gpu_resident:
                 train_factory = train_loader
                 val_factory = val_loader
@@ -200,7 +202,7 @@ class TrainingEngine:
                 else:
                     total_steps = epochs * 100
             else:
-                total_steps = epochs * len(train_loader)
+                total_steps = epochs * len(cast(DeviceDataLoader, train_loader))
             step_count = 0
             start_time = time.time()
 
@@ -220,6 +222,7 @@ class TrainingEngine:
                 yield {"type": "stopped", "message": "Training cancelled", "epochs_completed": 0, "total_epochs": epochs}
                 return
 
+            epoch = 0
             for epoch in range(epochs):
                 if self._stop_event.is_set():
                     break

@@ -5,7 +5,7 @@ import hashlib
 import time
 import numpy as np
 from PIL import Image
-from typing import Any
+from typing import Any, Optional
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 
@@ -26,7 +26,7 @@ class DatasetInfo:
     split_info: dict[str, int] = field(default_factory=dict)
     metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -69,20 +69,21 @@ class DatasetManager:
         return hashlib.md5(f"{name}_{ts}".encode()).hexdigest()[:12]
 
     def _format_size(self, size_bytes: int) -> str:
+        remaining = float(size_bytes)
         for unit in ["B", "KB", "MB", "GB"]:
-            if size_bytes < 1024:
-                return f"{size_bytes:.1f} {unit}"
-            size_bytes /= 1024
-        return f"{size_bytes:.1f} TB"
+            if remaining < 1024:
+                return f"{remaining:.1f} {unit}"
+            remaining /= 1024
+        return f"{remaining:.1f} TB"
 
-    def list_datasets(self) -> list[dict]:
+    def list_datasets(self) -> list[dict[str, Any]]:
         return [d.to_dict() for d in self._datasets.values()]
 
-    def get_dataset(self, dataset_id: str) -> dict | None:
+    def get_dataset(self, dataset_id: str) -> dict[str, Any] | None:
         info = self._datasets.get(dataset_id)
         return info.to_dict() if info else None
 
-    def delete_dataset(self, dataset_id: str) -> dict:
+    def delete_dataset(self, dataset_id: str) -> dict[str, Any]:
         info = self._datasets.get(dataset_id)
         if not info:
             return {"valid": False, "errors": ["Dataset not found"]}
@@ -101,7 +102,7 @@ class DatasetManager:
         self._save_registry()
         return {"valid": True, "message": f"Dataset '{info.name}' deleted"}
 
-    def purge_all(self) -> dict:
+    def purge_all(self) -> dict[str, Any]:
         count = len(self._datasets)
         for ds_id in list(self._datasets.keys()):
             self.delete_dataset(ds_id)
@@ -110,7 +111,7 @@ class DatasetManager:
         os.makedirs(self.CACHE_DIR, exist_ok=True)
         return {"valid": True, "message": f"All {count} datasets purged"}
 
-    def load_from_folder(self, folder_path: str, name: str = None) -> dict:
+    def load_from_folder(self, folder_path: str, name: Optional[str] = None) -> dict[str, Any]:
         if not os.path.isdir(folder_path):
             return {"valid": False, "errors": ["Path is not a directory"]}
 
@@ -124,7 +125,7 @@ class DatasetManager:
         else:
             return self._load_flat_folder(folder_path, name)
 
-    def _load_image_folder(self, folder_path: str, subdirs: list[str], name: str) -> dict:
+    def _load_image_folder(self, folder_path: str, subdirs: list[str], name: str) -> dict[str, Any]:
         class_names = sorted(subdirs)
         num_classes = len(class_names)
         total_samples = 0
@@ -185,7 +186,7 @@ class DatasetManager:
         self._save_registry()
         return {"valid": True, "dataset": info.to_dict()}
 
-    def _load_flat_folder(self, folder_path: str, name: str) -> dict:
+    def _load_flat_folder(self, folder_path: str, name: str) -> dict[str, Any]:
         files = [f for f in os.listdir(folder_path) if f.lower().endswith((".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tiff", ".webp"))]
         total_samples = len(files)
 
@@ -238,7 +239,7 @@ class DatasetManager:
         self._save_registry()
         return {"valid": True, "dataset": info.to_dict()}
 
-    def load_from_csv(self, file_path: str, name: str = None, label_column: str = None) -> dict:
+    def load_from_csv(self, file_path: str, name: Optional[str] = None, label_column: Optional[str] = None) -> dict[str, Any]:
         import csv
 
         if not os.path.isfile(file_path):
@@ -324,7 +325,7 @@ class DatasetManager:
         except Exception as e:
             return {"valid": False, "errors": [f"Failed to parse CSV: {str(e)}"]}
 
-    def get_preview(self, dataset_id: str, limit: int = 10) -> dict:
+    def get_preview(self, dataset_id: str, limit: int = 10) -> dict[str, Any]:
         info = self._datasets.get(dataset_id)
         if not info:
             return {"valid": False, "errors": ["Dataset not found"]}
@@ -336,7 +337,7 @@ class DatasetManager:
         else:
             return {"valid": False, "errors": ["Unsupported dataset type for preview"]}
 
-    def _preview_csv(self, info: DatasetInfo, limit: int) -> dict:
+    def _preview_csv(self, info: DatasetInfo, limit: int) -> dict[str, Any]:
         import csv
         try:
             with open(info.file_path, "r", encoding="utf-8-sig") as f:
@@ -352,7 +353,7 @@ class DatasetManager:
         except Exception as e:
             return {"valid": False, "errors": [str(e)]}
 
-    def _preview_images(self, info: DatasetInfo, limit: int) -> dict:
+    def _preview_images(self, info: DatasetInfo, limit: int) -> dict[str, Any]:
         import base64
         from io import BytesIO
 
@@ -401,7 +402,7 @@ class DatasetManager:
             "showing": len(images)
         }
 
-    def get_visualization(self, dataset_id: str) -> dict:
+    def get_visualization(self, dataset_id: str) -> dict[str, Any]:
         now = time.time()
         cache_key = f"viz_{dataset_id}"
         if cache_key in self._viz_cache:
@@ -413,7 +414,7 @@ class DatasetManager:
         if not info:
             return {"valid": False, "errors": ["Dataset not found"]}
 
-        viz = {
+        viz: dict[str, Any] = {
             "id": info.id,
             "name": info.name,
             "type": info.dataset_type,
@@ -495,7 +496,7 @@ class DatasetManager:
         self._viz_cache[cache_key] = (viz, now)
         return {"valid": True, "visualization": viz}
 
-    def _load_csv_rows(self, info, max_rows: int = None):
+    def _load_csv_rows(self, info, max_rows: Optional[int] = None):
         import csv
         with open(info.file_path, "r", encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)
@@ -508,7 +509,7 @@ class DatasetManager:
                 return rows
             return list(reader)
 
-    def get_column_stats(self, dataset_id: str, column: str = None) -> dict:
+    def get_column_stats(self, dataset_id: str, column: Optional[str] = None) -> dict[str, Any]:
         now = time.time()
         cache_key = f"col_{dataset_id}_{column or 'all'}"
         if cache_key in self._col_cache:
@@ -666,7 +667,7 @@ class DatasetManager:
         except Exception as e:
             return {"valid": False, "errors": [f"Error: {e}\n{traceback.format_exc()}"]}
 
-    def _compute_column_relations(self, rows, source_col, numeric_cols, categorical_cols, label_col, resolve_col, get_val, safe_float_values):
+    def _compute_column_relations(self, rows, source_col, numeric_cols, categorical_cols, label_col, resolve_col, get_val, safe_float_values) -> dict[str, Any]:
         relations = {"numeric": {}, "categorical": {}}
         max_categories = 50
 
@@ -744,7 +745,7 @@ class DatasetManager:
 
         return relations
 
-    def get_dataloader_config(self, dataset_id: str) -> dict:
+    def get_dataloader_config(self, dataset_id: str) -> dict[str, Any]:
         info = self._datasets.get(dataset_id)
         if not info:
             return {"valid": False, "errors": ["Dataset not found"]}
@@ -760,7 +761,7 @@ class DatasetManager:
         }
         return {"valid": True, "config": config}
 
-    def get_available_target_columns(self, dataset_id: str) -> dict:
+    def get_available_target_columns(self, dataset_id: str) -> dict[str, Any]:
         info = self._datasets.get(dataset_id)
         if not info:
             return {"valid": False, "errors": ["Dataset not found"]}
@@ -809,7 +810,7 @@ class DatasetManager:
         except Exception as e:
             return {"valid": False, "errors": [f"Failed to analyze columns: {str(e)}"]}
 
-    def set_label_column(self, dataset_id: str, label_column: str) -> dict:
+    def set_label_column(self, dataset_id: str, label_column: str) -> dict[str, Any]:
         info = self._datasets.get(dataset_id)
         if not info:
             return {"valid": False, "errors": ["Dataset not found"]}

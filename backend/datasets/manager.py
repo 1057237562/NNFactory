@@ -5,7 +5,7 @@ import hashlib
 import time
 import numpy as np
 from PIL import Image
-from typing import Any
+from typing import Any, Optional
 from datetime import datetime
 
 from .info import DatasetInfo
@@ -64,11 +64,12 @@ class DatasetManager:
         return hashlib.md5(f"{name}_{ts}".encode()).hexdigest()[:12]
 
     def _format_size(self, size_bytes: int) -> str:
+        remaining = float(size_bytes)
         for unit in ["B", "KB", "MB", "GB"]:
-            if size_bytes < 1024:
-                return f"{size_bytes:.1f} {unit}"
-            size_bytes /= 1024
-        return f"{size_bytes:.1f} TB"
+            if remaining < 1024:
+                return f"{remaining:.1f} {unit}"
+            remaining /= 1024
+        return f"{remaining:.1f} TB"
 
     def list_datasets(self) -> list[dict[str, Any]]:
         return [d.to_dict() for d in self._datasets.values()]
@@ -105,7 +106,7 @@ class DatasetManager:
         os.makedirs(self.CACHE_DIR, exist_ok=True)
         return {"valid": True, "message": f"All {count} datasets purged"}
 
-    def load_from_folder(self, folder_path: str, name: str = None) -> dict[str, Any]:
+    def load_from_folder(self, folder_path: str, name: Optional[str] = None) -> dict[str, Any]:
         if not os.path.isdir(folder_path):
             return {"valid": False, "errors": ["Path is not a directory"]}
 
@@ -233,7 +234,7 @@ class DatasetManager:
         self._save_registry()
         return {"valid": True, "dataset": info.to_dict()}
 
-    def load_from_csv(self, file_path: str, name: str = None, label_column: str = None) -> dict[str, Any]:
+    def load_from_csv(self, file_path: str, name: Optional[str] = None, label_column: Optional[str] = None) -> dict[str, Any]:
         import csv
 
         if not os.path.isfile(file_path):
@@ -408,7 +409,7 @@ class DatasetManager:
         if not info:
             return {"valid": False, "errors": ["Dataset not found"]}
 
-        viz = {
+        viz: dict[str, Any] = {
             "id": info.id,
             "name": info.name,
             "type": info.dataset_type,
@@ -490,7 +491,7 @@ class DatasetManager:
         self._viz_cache[cache_key] = (viz, now)
         return {"valid": True, "visualization": viz}
 
-    def _load_csv_rows(self, info, max_rows: int = None):
+    def _load_csv_rows(self, info, max_rows: Optional[int] = None):
         import csv
         with open(info.file_path, "r", encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)

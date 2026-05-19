@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 from .device_utils import get_device_detection_code
 from .models.blueprint import Blueprint, LayerConfig, Connection
 
@@ -83,7 +83,7 @@ class CodeGenerator:
                 param_strs.append(f"{key}={value}")
         return ", ".join(param_strs)
 
-    def _generate_layer_init(self, layer: LayerConfig) -> str:
+    def _generate_layer_init(self, layer: LayerConfig) -> Optional[str]:
         layer_type = layer.type.lower()
         
         if layer_type in ["input", "output"]:

@@ -5,7 +5,15 @@ CUDA (NVIDIA), ROCm (AMD), XPU (Intel), MPS (Apple), CPU fallback.
 All functions are safe to call on CPU-only machines.
 """
 
+from typing import Any
+
 import torch
+
+
+def _get_torch_version() -> Any:
+    """Safely get the torch.version module (may not be in Pyright stubs)."""
+    import torch.version as _tv  # noqa: F401
+    return getattr(torch, 'version', None)
 
 
 def is_cuda_available() -> tuple[bool, str]:
@@ -18,10 +26,11 @@ def is_cuda_available() -> tuple[bool, str]:
     if not torch.cuda.is_available():
         return False, ""
 
-    if torch.version.hip is not None:
+    tv = _get_torch_version()
+    if tv is not None and tv.hip is not None:
         return True, "amd"
 
-    if torch.version.cuda is not None:
+    if tv is not None and tv.cuda is not None:
         return True, "nvidia"
 
     return True, ""
@@ -33,7 +42,8 @@ def is_rocm_available() -> bool:
     Returns:
         True if CUDA is available with HIP (ROCm backend), False otherwise.
     """
-    return torch.cuda.is_available() and torch.version.hip is not None
+    tv = _get_torch_version()
+    return torch.cuda.is_available() and tv is not None and tv.hip is not None
 
 
 def is_xpu_available() -> bool:

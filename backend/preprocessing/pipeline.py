@@ -56,7 +56,7 @@ class PreprocessingPipeline:
             affected = 0
             with open(self.file_path, "r", encoding="utf-8-sig") as f:
                 reader = csv.DictReader(f)
-                headers = reader.fieldnames
+                headers = list(reader.fieldnames) if reader.fieldnames else []
                 for row in reader:
                     row_label = row.get(label_col, "")
                     in_classes = row_label in classes if classes else True
@@ -120,11 +120,11 @@ class PreprocessingPipeline:
         self.num_samples = self.source_info.get("num_samples", 0)
         self.num_classes = self.source_info.get("num_classes", 0)
         self.metadata = self.source_info.get("metadata", {})
-        self.transformations_applied: list = []
+        self.transformations_applied: list[dict[str, Any]] = []
         self.affected_samples = 0
         self.affected_columns = 0
 
-    def execute(self, operations: list[dict]) -> PreprocessingResult:
+    def execute(self, operations: list[dict[str, Any]]) -> PreprocessingResult:
         try:
             for op in operations:
                 op_type = op.get("type")

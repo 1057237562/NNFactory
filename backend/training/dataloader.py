@@ -2,7 +2,7 @@ import os
 import csv
 import hashlib
 import time
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, cast
 
 import numpy as np
 import torch
@@ -50,7 +50,7 @@ class DeviceDataLoader:
             return
 
         for next_batch in self._iterator:
-            with stream_cm(self.stream):
+            with stream_cm(cast(Any, self.stream)):
                 next_batch = tuple(
                     t.to(self.device, non_blocking=True) if isinstance(t, torch.Tensor) else t
                     for t in next_batch
@@ -63,7 +63,7 @@ class DeviceDataLoader:
 
             batch = next_batch
 
-        with stream_cm(self.stream):
+        with stream_cm(cast(Any, self.stream)):
             batch = tuple(
                 t.to(self.device, non_blocking=True) if isinstance(t, torch.Tensor) else t
                 for t in batch

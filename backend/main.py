@@ -413,7 +413,7 @@ async def set_label_column(dataset_id: str, label_column: str = Query(...)):
     return dataset_manager.set_label_column(dataset_id, label_column)
 
 @app.post("/datasets/{dataset_id}/preprocess")
-async def preprocess_dataset(dataset_id: str, operations: list[dict]):
+async def preprocess_dataset(dataset_id: str, operations: list[dict[str, Any]]):
     try:
         pipeline = PreprocessingPipeline(dataset_id, dataset_manager)
         result = pipeline.execute(operations)

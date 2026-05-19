@@ -5,7 +5,7 @@ import shutil
 import hashlib
 import time
 import numpy as np
-from typing import Any, Optional
+from typing import Any, Optional, Sequence
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 
@@ -19,9 +19,9 @@ class PreprocessingResult:
     affected_samples: int = 0
     affected_columns: int = 0
     new_dataset_id: Optional[str] = None
-    errors: list = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -38,11 +38,11 @@ class PreprocessingPipeline:
         self.num_samples = self.source_info.get("num_samples", 0)
         self.num_classes = self.source_info.get("num_classes", 0)
         self.metadata = self.source_info.get("metadata", {})
-        self.transformations_applied: list = []
+        self.transformations_applied: list[dict[str, Any]] = []
         self.affected_samples = 0
         self.affected_columns = 0
 
-    def execute(self, operations: list[dict]) -> PreprocessingResult:
+    def execute(self, operations: list[dict[str, Any]]) -> PreprocessingResult:
         try:
             for op in operations:
                 op_type = op.get("type")
@@ -79,7 +79,7 @@ class PreprocessingPipeline:
                 errors=[str(e)]
             )
 
-    def _apply_filter_class(self, params: dict) -> dict:
+    def _apply_filter_class(self, params: dict[str, Any]) -> dict[str, Any]:
         classes_str = params.get("classes", "")
         mode = params.get("mode", "keep")
         
@@ -97,7 +97,7 @@ class PreprocessingPipeline:
             affected = 0
             with open(self.file_path, "r", encoding="utf-8-sig") as f:
                 reader = csv.DictReader(f)
-                headers = reader.fieldnames
+                headers = reader.fieldnames or []
                 for row in reader:
                     row_label = row.get(label_col, "")
                     in_classes = row_label in classes if classes else True
@@ -123,14 +123,14 @@ class PreprocessingPipeline:
         
         return {"affected_samples": 0, "affected_columns": 0}
 
-    def _apply_remove_samples(self, params: dict) -> dict:
+    def _apply_remove_samples(self, params: dict[str, Any]) -> dict[str, Any]:
         count = params.get("count", 100)
         strategy = params.get("strategy", "random")
         
         if self.dataset_type == "tabular_csv":
             with open(self.file_path, "r", encoding="utf-8-sig") as f:
                 reader = csv.DictReader(f)
-                headers = reader.fieldnames
+                headers = reader.fieldnames or []
                 all_rows = list(reader)
             
             if strategy == "first":
@@ -157,7 +157,7 @@ class PreprocessingPipeline:
         
         return {"affected_samples": 0, "affected_columns": 0}
 
-    def _apply_split(self, params: dict) -> dict:
+    def _apply_split(self, params: dict[str, Any]) -> dict[str, Any]:
         train_ratio = params.get("train_ratio", 0.8)
         val_ratio = params.get("val_ratio", 0.2)
         
@@ -168,7 +168,7 @@ class PreprocessingPipeline:
         
         return {"affected_samples": 0, "affected_columns": 0}
 
-    def _apply_balance(self, params: dict) -> dict:
+    def _apply_balance(self, params: dict[str, Any]) -> dict[str, Any]:
         method = params.get("method", "undersample")
         
         if self.dataset_type == "tabular_csv":
@@ -178,7 +178,7 @@ class PreprocessingPipeline:
             
             with open(self.file_path, "r", encoding="utf-8-sig") as f:
                 reader = csv.DictReader(f)
-                headers = reader.fieldnames
+                headers = reader.fieldnames or []
                 all_rows = list(reader)
             
             by_label = {}
@@ -231,7 +231,7 @@ class PreprocessingPipeline:
         
         return {"affected_samples": 0, "affected_columns": 0}
 
-    def _apply_normalize(self, params: dict) -> dict:
+    def _apply_normalize(self, params: dict[str, Any]) -> dict[str, Any]:
         method = params.get("method", "zscore")
         
         if self.dataset_type == "tabular_csv":
@@ -241,7 +241,7 @@ class PreprocessingPipeline:
             
             with open(self.file_path, "r", encoding="utf-8-sig") as f:
                 reader = csv.DictReader(f)
-                headers = reader.fieldnames
+                headers = reader.fieldnames or []
                 all_rows = list(reader)
             
             stats = {}
@@ -294,7 +294,7 @@ class PreprocessingPipeline:
         
         return {"affected_samples": 0, "affected_columns": 0}
 
-    def _apply_resize(self, params: dict) -> dict:
+    def _apply_resize(self, params: dict[str, Any]) -> dict[str, Any]:
         width = params.get("width", 224)
         height = params.get("height", 224)
         
@@ -309,7 +309,7 @@ class PreprocessingPipeline:
         
         return {"affected_samples": 0, "affected_columns": 0}
 
-    def _apply_one_hot(self, params: dict) -> dict:
+    def _apply_one_hot(self, params: dict[str, Any]) -> dict[str, Any]:
         columns_str = params.get("columns", "")
         drop_first = params.get("drop_first", False)
         max_categories = params.get("max_categories", 50)
@@ -329,7 +329,7 @@ class PreprocessingPipeline:
             
             with open(self.file_path, "r", encoding="utf-8-sig") as f:
                 reader = csv.DictReader(f)
-                headers = reader.fieldnames
+                headers = reader.fieldnames or []
                 all_rows = list(reader)
             
             encoders = {}
@@ -392,7 +392,7 @@ class PreprocessingPipeline:
         
         return {"affected_samples": 0, "affected_columns": 0}
 
-    def _apply_label_encode(self, params: dict) -> dict:
+    def _apply_label_encode(self, params: dict[str, Any]) -> dict[str, Any]:
         columns_str = params.get("columns", "")
         sort_by_freq = params.get("sort_by_freq", False)
         
@@ -411,7 +411,7 @@ class PreprocessingPipeline:
             
             with open(self.file_path, "r", encoding="utf-8-sig") as f:
                 reader = csv.DictReader(f)
-                headers = reader.fieldnames
+                headers = reader.fieldnames or []
                 all_rows = list(reader)
             
             encoders = {}
@@ -456,7 +456,7 @@ class PreprocessingPipeline:
 
         return {"affected_samples": 0, "affected_columns": 0}
 
-    def _apply_ordinal_encode(self, params: dict) -> dict:
+    def _apply_ordinal_encode(self, params: dict[str, Any]) -> dict[str, Any]:
         columns_str = params.get("columns", "")
         mappings_str = params.get("mappings", "")
         
@@ -479,7 +479,7 @@ class PreprocessingPipeline:
             
             with open(self.file_path, "r", encoding="utf-8-sig") as f:
                 reader = csv.DictReader(f)
-                headers = reader.fieldnames
+                headers = reader.fieldnames or []
                 all_rows = list(reader)
             
             encoders = {}
@@ -522,7 +522,7 @@ class PreprocessingPipeline:
 
         return {"affected_samples": 0, "affected_columns": 0}
 
-    def _apply_target_encode(self, params: dict) -> dict:
+    def _apply_target_encode(self, params: dict[str, Any]) -> dict[str, Any]:
         columns_str = params.get("columns", "")
         label_col = params.get("label_col", "")
         smoothing = params.get("smoothing", 1.0)
@@ -545,7 +545,7 @@ class PreprocessingPipeline:
             
             with open(self.file_path, "r", encoding="utf-8-sig") as f:
                 reader = csv.DictReader(f)
-                headers = reader.fieldnames
+                headers = reader.fieldnames or []
                 all_rows = list(reader)
             
             label_values = []
@@ -603,7 +603,7 @@ class PreprocessingPipeline:
 
         return {"affected_samples": 0, "affected_columns": 0}
 
-    def _apply_frequency_encode(self, params: dict) -> dict:
+    def _apply_frequency_encode(self, params: dict[str, Any]) -> dict[str, Any]:
         columns_str = params.get("columns", "")
         
         if self.dataset_type == "tabular_csv":
@@ -621,7 +621,7 @@ class PreprocessingPipeline:
             
             with open(self.file_path, "r", encoding="utf-8-sig") as f:
                 reader = csv.DictReader(f)
-                headers = reader.fieldnames
+                headers = reader.fieldnames or []
                 all_rows = list(reader)
             
             encoders = {}
@@ -662,7 +662,7 @@ class PreprocessingPipeline:
 
         return {"affected_samples": 0, "affected_columns": 0}
 
-    def _apply_binary_encode(self, params: dict) -> dict:
+    def _apply_binary_encode(self, params: dict[str, Any]) -> dict[str, Any]:
         columns_str = params.get("columns", "")
         
         if self.dataset_type == "tabular_csv":
@@ -680,7 +680,7 @@ class PreprocessingPipeline:
             
             with open(self.file_path, "r", encoding="utf-8-sig") as f:
                 reader = csv.DictReader(f)
-                headers = list(reader.fieldnames)
+                headers = list(reader.fieldnames or [])
                 all_rows = list(reader)
             
             encoders = {}
@@ -692,7 +692,7 @@ class PreprocessingPipeline:
                 values = sorted(set(row.get(col, "") for row in all_rows if row.get(col, "")))
                 
                 value_to_int = {v: i for i, v in enumerate(values)}
-                max_bits = len(bin(len(values) - 1))[2:] if len(values) > 1 else 1
+                max_bits = bin(len(values) - 1)[2:] if len(values) > 1 else "1"
                 bit_width = max(len(max_bits), 1)
                 
                 encoders[col] = {"values": values, "bit_width": bit_width}
@@ -737,7 +737,7 @@ class PreprocessingPipeline:
 
         return {"affected_samples": 0, "affected_columns": 0}
 
-    def _apply_hash_encode(self, params: dict) -> dict:
+    def _apply_hash_encode(self, params: dict[str, Any]) -> dict[str, Any]:
         columns_str = params.get("columns", "")
         n_components = params.get("n_components", 8)
         signed = params.get("signed", False)
@@ -757,7 +757,7 @@ class PreprocessingPipeline:
             
             with open(self.file_path, "r", encoding="utf-8-sig") as f:
                 reader = csv.DictReader(f)
-                headers = list(reader.fieldnames)
+                headers = list(reader.fieldnames or [])
                 all_rows = list(reader)
             
             encoders = {}
@@ -801,7 +801,7 @@ class PreprocessingPipeline:
 
         return {"affected_samples": 0, "affected_columns": 0}
 
-    def _create_temp_dataset(self, headers: list, rows: list) -> str:
+    def _create_temp_dataset(self, headers: Sequence[str], rows: list[dict[str, Any]]) -> str:
         dataset_id = hashlib.md5(f"processed_{self.source_id}_{time.time()}".encode()).hexdigest()[:12]
         dest_path = os.path.join(self.ds_manager.DATASETS_DIR, f"{dataset_id}.csv")
         
@@ -819,7 +819,7 @@ class PreprocessingPipeline:
         self.metadata["transformations"] = self.transformations_applied
         self.metadata["processed_at"] = datetime.now().isoformat()
         
-        new_info = {
+        new_info: dict[str, Any] = {
             "id": new_id,
             "name": f"{self.source_info.get('name', 'dataset')}_preprocessed",
             "dataset_type": self.dataset_type,

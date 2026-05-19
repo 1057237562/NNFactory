@@ -1,10 +1,10 @@
 import csv
 import time
 import numpy as np
-from typing import Any
+from typing import Any, Optional
 
 
-def get_column_stats(self, dataset_id: str, column: str = None) -> dict[str, Any]:
+def get_column_stats(self, dataset_id: str, column: Optional[str] = None) -> dict[str, Any]:
     now = time.time()
     cache_key = f"col_{dataset_id}_{column or 'all'}"
     if cache_key in self._col_cache:
