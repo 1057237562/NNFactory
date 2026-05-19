@@ -1,5 +1,6 @@
 import json
 import os
+import zipfile
 import tempfile
 import shutil
 import asyncio
@@ -225,12 +226,35 @@ async def evaluate_images(
     temp_dir = tempfile.mkdtemp()
     try:
         image_paths = []
+        image_exts = {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'}
         for img in images:
             content = await img.read()
-            path = os.path.join(temp_dir, img.filename or "image.png")
-            with open(path, "wb") as f:
-                f.write(content)
-            image_paths.append(path)
+            filename = img.filename or "image.png"
+            _, ext = os.path.splitext(filename)
+            ext = ext.lower()
+
+            if ext == '.zip':
+                zip_path = os.path.join(temp_dir, filename)
+                with open(zip_path, "wb") as f:
+                    f.write(content)
+                with zipfile.ZipFile(zip_path, 'r') as zf:
+                    for entry in zf.namelist():
+                        entry_lower = entry.lower()
+                        if any(entry_lower.endswith(e) for e in image_exts):
+                            extracted = os.path.join(temp_dir, os.path.basename(entry))
+                            os.makedirs(os.path.dirname(extracted), exist_ok=True)
+                            with zf.open(entry) as src, open(extracted, 'wb') as dst:
+                                dst.write(src.read())
+                            image_paths.append(extracted)
+                os.remove(zip_path)
+            else:
+                path = os.path.join(temp_dir, filename)
+                with open(path, "wb") as f:
+                    f.write(content)
+                image_paths.append(path)
+
+        if len(image_paths) > 50:
+            return {"valid": False, "errors": ["Maximum 50 images per request (after ZIP extraction)"]}
 
         result = evaluator.evaluate_images(image_paths, top_k)
         return result
