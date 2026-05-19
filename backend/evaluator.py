@@ -2,7 +2,7 @@ import importlib.util
 import os
 import csv
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 import numpy as np
 import torch
@@ -10,7 +10,9 @@ import torch.nn.functional as F
 from torchvision import transforms
 from PIL import Image
 
-from code_generator import Blueprint, CodeGenerator
+from models.blueprint import Blueprint
+from code_generator import CodeGenerator
+from preprocessing_metadata import PreprocessingMetadata
 
 
 class CustomEvaluator:
@@ -26,6 +28,7 @@ class CustomEvaluator:
         self.blueprint = blueprint
         self.code_generator = CodeGenerator(blueprint)
         self._temp_path: str | None = None
+        self._preprocessing_meta: Optional[PreprocessingMetadata] = None
         os.makedirs(self.TEMP_DIR, exist_ok=True)
 
     def build_model(self, device: str = "cpu") -> Any:
@@ -97,6 +100,10 @@ class CustomEvaluator:
             return {"valid": False, "errors": errors}
 
         model.load_state_dict(state_dict)
+
+        # Load preprocessing metadata sidecar (may be None for legacy weights)
+        self._preprocessing_meta = PreprocessingMetadata.load(weights_filename)
+
         return {"valid": True}
 
     def detect_type(self) -> dict[str, Any]:
@@ -155,6 +162,10 @@ class CustomEvaluator:
     ) -> dict[str, Any]:
         """Run image classification inference on a list of image files.
 
+        Uses training-derived resize dimensions and normalisation parameters
+        from preprocessing metadata (loaded via ``load_weights``). Falls back
+        to blueprint ``input_shape`` and ImageNet defaults for legacy models.
+
         Args:
             image_paths: Paths to image files.
             top_k: Number of top predictions per image.
@@ -170,6 +181,19 @@ class CustomEvaluator:
         model = self.build_model()
         model.eval()
 
+        # Resolve image transform params: metadata > blueprint > ImageNet defaults
+        meta = self._preprocessing_meta
+        if meta and meta.dataset_type in ("image_classification", "image_folder"):
+            h, w = meta.resize_height, meta.resize_width
+            img_mean = meta.image_normalization_mean
+            img_std = meta.image_normalization_std
+        else:
+            input_shape = type_info.get("input_shape", [3, 224, 224])
+            h = input_shape[1] if len(input_shape) >= 2 else 224
+            w = input_shape[2] if len(input_shape) >= 3 else 224
+            img_mean = [0.485, 0.456, 0.406]
+            img_std = [0.229, 0.224, 0.225]
+
         predictions: list[list[dict[str, Any]]] = []
         with torch.inference_mode():
             for img_path in image_paths:
@@ -177,16 +201,10 @@ class CustomEvaluator:
                     img = Image.open(img_path).convert("RGB")
 
                     if type_info["type"] == "image":
-                        input_shape = type_info.get("input_shape", [3, 224, 224])
-                        h = input_shape[1] if len(input_shape) >= 2 else 224
-                        w = input_shape[2] if len(input_shape) >= 3 else 224
                         transform = transforms.Compose([
                             transforms.Resize((h, w)),
                             transforms.ToTensor(),
-                            transforms.Normalize(
-                                mean=[0.485, 0.456, 0.406],
-                                std=[0.229, 0.224, 0.225],
-                            ),
+                            transforms.Normalize(mean=img_mean, std=img_std),
                         ])
                         tensor = transform(img).unsqueeze(0)
                     else:
@@ -218,9 +236,9 @@ class CustomEvaluator:
     def evaluate_tabular_csv(self, csv_path: str) -> dict[str, Any]:
         """Run inference on tabular CSV data and write results with prediction column.
 
-        Detects numeric columns, applies z-score normalisation to the uploaded
-        data, runs the model, and writes an output CSV with an added
-        ``prediction`` column.
+        Uses training-derived preprocessing metadata (feature columns,
+        normalisation statistics) when available via loaded weights.
+        Falls back to auto-detection for legacy models without metadata.
 
         Args:
             csv_path: Path to the input CSV file.
@@ -239,33 +257,53 @@ class CustomEvaluator:
         if not rows:
             return {"valid": False, "errors": ["CSV file is empty"]}
 
-        skip_cols = {"label", "target", "class", "prediction"}
-        numeric_cols: list[str] = []
-        for col in fieldnames:
-            if col.lower() in skip_cols:
-                continue
-            try:
-                float(rows[0].get(col, ""))
-                numeric_cols.append(col)
-            except (ValueError, TypeError):
-                pass
+        meta = self._preprocessing_meta
 
-        if not numeric_cols:
-            return {"valid": False, "errors": ["No numeric columns found in CSV"]}
+        # Use training-derived feature columns when metadata is available
+        if meta and meta.feature_columns:
+            cols_to_use = [c for c in meta.feature_columns if c in fieldnames]
+            if not cols_to_use:
+                return {"valid": False, "errors": [
+                    f"None of the training feature columns {meta.feature_columns} "
+                    f"found in evaluation CSV columns {fieldnames}"
+                ]}
+        else:
+            # Fallback for legacy weights: auto-detect numeric columns
+            skip_cols = {"label", "target", "class", "prediction"}
+            cols_to_use: list[str] = []
+            for col in fieldnames:
+                if col.lower() in skip_cols:
+                    continue
+                try:
+                    float(rows[0].get(col, ""))
+                    cols_to_use.append(col)
+                except (ValueError, TypeError):
+                    pass
+            if not cols_to_use:
+                return {"valid": False, "errors": ["No numeric columns found in CSV"]}
 
         n_rows = len(rows)
-        n_cols = len(numeric_cols)
+        n_cols = len(cols_to_use)
         x_matrix = np.zeros((n_rows, n_cols))
         for i, row in enumerate(rows):
-            for j, col in enumerate(numeric_cols):
+            for j, col in enumerate(cols_to_use):
                 try:
                     x_matrix[i, j] = float(row.get(col, 0))
                 except (ValueError, TypeError):
                     x_matrix[i, j] = 0.0
 
-        mean = x_matrix.mean(axis=0)
-        std = x_matrix.std(axis=0) + 1e-8
-        x_normalized = (x_matrix - mean) / std
+        # Apply training-derived normalisation when available
+        if meta and meta.is_normalized:
+            x_normalized = x_matrix
+        elif meta and meta.normalization_mean and meta.normalization_std:
+            training_mean = np.array(meta.normalization_mean)
+            training_std = np.array(meta.normalization_std) + 1e-8
+            x_normalized = (x_matrix - training_mean) / training_std
+        else:
+            # Fallback: normalise using eval data's own statistics
+            eval_mean = x_matrix.mean(axis=0)
+            eval_std = x_matrix.std(axis=0) + 1e-8
+            x_normalized = (x_matrix - eval_mean) / eval_std
 
         x_tensor = torch.tensor(x_normalized, dtype=torch.float32)
 
@@ -297,6 +335,10 @@ class CustomEvaluator:
     def evaluate_tabular_single(self, values: list[float]) -> dict[str, Any]:
         """Run inference on a single row of tabular data.
 
+        Applies training-derived normalisation when preprocessing metadata
+        is available (loaded via ``load_weights``). Falls back to raw
+        values for legacy models.
+
         Args:
             values: Feature values matching the model's ``in_features``.
 
@@ -306,7 +348,16 @@ class CustomEvaluator:
         model = self.build_model()
         model.eval()
 
-        x_tensor = torch.tensor([values], dtype=torch.float32)
+        # Apply training normalisation if metadata available
+        meta = self._preprocessing_meta
+        if meta and meta.normalization_mean and meta.normalization_std:
+            training_mean = np.array(meta.normalization_mean)
+            training_std = np.array(meta.normalization_std) + 1e-8
+            values_arr = ((np.array(values) - training_mean) / training_std).tolist()
+        else:
+            values_arr = values
+
+        x_tensor = torch.tensor([values_arr], dtype=torch.float32)
 
         with torch.inference_mode():
             output = model(x_tensor)

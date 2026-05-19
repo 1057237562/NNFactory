@@ -7,10 +7,11 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from fastapi import FastAPI, UploadFile, File, Form, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.responses import FileResponse, StreamingResponse, Response
 from pydantic import BaseModel
 from typing import Any, Optional
 from code_generator import CodeGenerator
+from models.blueprint import Blueprint
 from training_engine import TrainingEngine
 from dataset_manager import DatasetManager
 from preprocessing_pipeline import PreprocessingPipeline, PreprocessingResult
@@ -27,24 +28,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-class LayerConfig(BaseModel):
-    id: str
-    type: str
-    params: dict[str, Any]
-    position: dict[str, float]
-
-class Connection(BaseModel):
-    from_id: str
-    to_id: str
-
-class Blueprint(BaseModel):
-    layers: list[LayerConfig]
-    connections: list[Connection]
-    model_name: str = "NeuralNetwork"
-    use_jit: bool = False
-    use_compile: bool = False
-    device: str = "cpu"
 
 class TrainConfig(BaseModel):
     blueprint: Blueprint
@@ -294,10 +277,14 @@ async def evaluate_tabular_csv(
         if not result.get("valid", True):
             return result
 
-        return FileResponse(
-            result["output_path"],
+        with open(result["output_path"], "rb") as f:
+            csv_content = f.read()
+        return Response(
+            content=csv_content,
             media_type="text/csv",
-            filename=f"eval_{file.filename}"
+            headers={
+                "Content-Disposition": f'attachment; filename="eval_{file.filename}"'
+            },
         )
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)

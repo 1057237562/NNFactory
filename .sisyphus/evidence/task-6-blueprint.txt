@@ -1,0 +1,22 @@
+Task 6: Blueprint Model Extraction - Evidence
+==============================================
+
+Date: 2026-05-19
+
+Changes Made:
+1. Created backend/models/blueprint.py - authoritative Pydantic models (LayerConfig, Connection, Blueprint)
+2. Updated backend/models/__init__.py - re-exports Blueprint, LayerConfig, Connection
+3. Updated backend/main.py - removed local model defs, imports Blueprint from models.blueprint
+4. Updated backend/code_generator.py - removed local model defs, imports from models.blueprint
+5. Updated backend/evaluator.py - imports Blueprint from models.blueprint instead of code_generator
+
+Verification:
+- python -c "from models.blueprint import Blueprint, LayerConfig, Connection" -> OK
+- python -c "from models import Blueprint" -> OK
+- python -c "from main import app" -> OK
+- python -c "from code_generator import CodeGenerator" -> OK
+- python -c "from evaluator import CustomEvaluator" -> OK
+
+Duplicate model definitions eliminated:
+- models/blueprint.py: LayerConfig (line 5), Connection (line 12), Blueprint (line 17)
+- No other definitions remain in main.py or code_generator.py
