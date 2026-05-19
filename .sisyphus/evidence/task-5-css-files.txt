@@ -1,0 +1,36 @@
+Task 5: CSS File Split Evidence
+=================================
+Date: 2026-05-19
+Source: frontend/css/style.css (5952 lines)
+
+11 CSS Files Created:
+---------------------
+| File                    | Lines | Source Sections (from css-section-map.md)                              |
+|-------------------------|-------|-----------------------------------------------------------------------|
+| base.css                | 79    | 1 (:root), 2 (* reset), 3 (body), 125 (loading)                      |
+| layout.css              | 390   | 4 (#app), 5 (.header), 6 (backend), 7 (center), 11 (main), 12-16 (sidebar), 20-25 (properties), 29 (delete) |
+| components.css          | 395   | 8 (device), 9 (toggle), 10 (buttons), 26-28 (inputs/selects), 31 (toast), 48 (.btn-sm), 108 (form redefined), 124 (toast redefined) |
+| canvas.css              | 257   | 17-19 (canvas), 32-35 (nodes, connections, indicators)                |
+| modals.css              | 122   | 30 (code modal), 36 (modal-lg/xl), 94 (modal-sm)                     |
+| training.css            | 434   | 37-45 (training config/progress/results), 109 (train modal redefined)|
+| evaluator.css           | 521   | 49-50 (eval summary/details), 126 (eval redefined), 129 (custom eval), 130 (empty state) |
+| dataset-manager.css     | 1919  | 51-67, 74-88, 97-99, 110-120, 127 (all dataset sections)             |
+| dataset-viz.css         | 1125  | 68-73, 100-107, 121, 128 (all viz sections)                          |
+| preprocessing.css       | 548   | 89-96, 122 (preprocessing blueprint + redefined)                     |
+| weights.css             | 162   | 46-47 (weights list/item), 123 (redefined), 131 (refresh btn)        |
+|-------------------------|-------|-----------------------------------------------------------------------|
+| TOTAL                   | 5952  |                                                                       |
+
+Changes Made:
+--------------
+1. Created 11 CSS files in frontend/css/ with exact content from style.css
+2. Updated frontend/index.html line 7: replaced single <link> with 11 links in load order:
+   base.css → layout.css → components.css → canvas.css → modals.css → training.css → evaluator.css → dataset-manager.css → dataset-viz.css → preprocessing.css → weights.css
+3. style.css preserved in place (not deleted)
+
+Verification:
+--------------
+- Total extracted lines: 5952 (matches original)
+- No lines omitted or duplicated
+- All CSS rules, comments, and whitespace preserved exactly
+- Original style.css unchanged
