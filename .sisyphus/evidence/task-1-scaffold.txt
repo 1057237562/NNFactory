@@ -1,0 +1,15 @@
+backend/datasets:
+__init__.py
+
+backend/models:
+__init__.py
+
+backend/preprocessing:
+__init__.py
+
+backend/training:
+__init__.py
+
+frontend/html/modals:
+
+frontend/js/dataset:
