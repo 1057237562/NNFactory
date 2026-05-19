@@ -931,6 +931,7 @@ class App {
     closeDatasetModal() {
         document.getElementById('datasetModal').classList.remove('active');
     }
+}
 
 class TrainingChart {
     constructor(canvasId) {
