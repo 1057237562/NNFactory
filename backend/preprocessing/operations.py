@@ -720,7 +720,7 @@ def _export_dataset(self):
         "metadata": self.metadata
     }
 
-    from datasets.info import DatasetInfo
+    from ..datasets.info import DatasetInfo
     self.ds_manager._datasets[new_id] = DatasetInfo(**new_info)
     self.ds_manager._save_registry()
 
