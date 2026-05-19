@@ -1,0 +1,23 @@
+Task 10: Split dataset-manager.js into 3 files under frontend/js/dataset/
+
+Result: SUCCESS
+
+Files created:
+- frontend/js/dataset/dataset-manager.js (445 lines) — Core class + constructor + CRUD/list/select/upload/delete/purge/preview methods
+- frontend/js/dataset/dataset-viz.js (460 lines) — Visualization methods (showViz, loadColumnStats, drawCorrelationHeatmap, drawHistogram, drawCategoricalBarChart, renderNumericSummary, renderCategoricalSummary, renderColumnRelations, onColumnSelectChange)
+- frontend/js/dataset/pp-blueprint.js (351 lines) — Preprocessing methods (setupPreprocessBP, addPpNode, defaultParams, nodeLabel, renderPpNodes, renderPpConns, onPpMouseDown, onPpMouseMove, removePpNode, openNodeConfig, buildNodeForm, saveNodeCfg, execPreprocess, execNode)
+
+Changes:
+- Old frontend/js/dataset-manager.js DELETED
+- frontend/index.html: replaced `<script src="js/dataset-manager.js">` with 3 new script tags in correct load order (manager → viz → blueprint)
+
+Pattern:
+- Prototype augmentation: Class body has only constructor; all methods on prototype
+- All 3 files augment same DatasetManagerUI class
+- DS_API constant in manager file (global)
+
+Verification:
+- LSP diagnostics: 0 errors across all 3 files
+- Line counts: manager=445, viz=460, pp=351 (all ≤ 750)
+- Total: 1,256 lines (vs 1,258 original — minor diff from prototype syntax)
+- Old file confirmed deleted
