@@ -1,0 +1,27 @@
+Task 11 - Restructure Backend into Subpackages
+==============================================
+Date: 2026-05-19
+
+Created subpackage files:
+- backend/datasets/info.py (22 lines) - DatasetInfo dataclass
+- backend/datasets/stats.py (378 lines) - Statistics helper functions
+- backend/datasets/manager.py (504 lines) - DatasetManager class
+- backend/datasets/__init__.py (4 lines) - re-exports
+- backend/training/dataloader.py (437 lines) - DeviceDataLoader + data-loading functions
+- backend/training/engine.py (494 lines) - TrainingEngine class
+- backend/training/__init__.py (4 lines) - re-exports
+- backend/preprocessing/operations.py (733 lines) - PreprocessingResult + operation functions
+- backend/preprocessing/pipeline.py (162 lines) - PreprocessingPipeline class
+- backend/preprocessing/__init__.py (4 lines) - re-exports
+- backend/__init__.py - empty, enables package structure
+
+Updated files:
+- backend/main.py - imports from new subpackages
+- backend/test_fixes.py - imports from new subpackages
+
+All files ≤ 750 lines: PASS
+python -c "from main import app; print('OK')": PASS
+python -c "from datasets.manager import DatasetManager; print('OK')": PASS
+python -c "from training.engine import TrainingEngine; print('OK')": PASS
+python -c "from preprocessing.pipeline import PreprocessingPipeline; print('OK')": PASS
+python test_fixes.py: All 5 tests PASSED

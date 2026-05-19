@@ -12,7 +12,8 @@ cd ..
 echo.
 
 echo [2/3] Starting backend server...
-start /b cmd /c "cd backend && uvicorn main:app --reload --port 8000"
+set PYTHONPATH=%~dp0
+start /b cmd /c "set PYTHONPATH=%~dp0 && uvicorn backend.main:app --reload --port 8000"
 
 timeout /t 3 /nobreak >nul
 

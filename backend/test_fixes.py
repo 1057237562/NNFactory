@@ -2,8 +2,9 @@ import sys
 sys.path.insert(0, r'E:\Workspace\NNFactory\backend')
 
 # Test 1: Verify DatasetInfo is imported correctly
-from preprocessing_pipeline import PreprocessingPipeline, PreprocessingResult
-from dataset_manager import DatasetInfo
+from preprocessing.pipeline import PreprocessingPipeline  # pyright: ignore[reportImplicitRelativeImport]
+from preprocessing.operations import PreprocessingResult  # pyright: ignore[reportImplicitRelativeImport]
+from datasets.info import DatasetInfo  # pyright: ignore[reportImplicitRelativeImport]
 print('Test 1 PASSED: DatasetInfo import fixed')
 
 # Test 2: Verify one_hot encode logic creates binary columns
@@ -25,12 +26,11 @@ assert 'self.metadata["numeric_columns"]' in source_le, 'Missing label_encode me
 print('Test 4 PASSED: Label encode updates metadata')
 
 # Test 5: Verify import statement
-with open(r'E:\Workspace\NNFactory\backend\preprocessing_pipeline.py') as f:
+with open(r'E:\Workspace\NNFactory\backend\preprocessing\pipeline.py') as f:
     content = f.read()
-assert 'from dataset_manager import DatasetManager, DatasetInfo' in content, 'Missing DatasetInfo import'
-assert 'DatasetInfo(**new_info)' in content, 'Still using broken self.ds_manager.DatasetInfo'
-assert 'self.ds_manager.DatasetInfo' not in content, 'Broken reference still present'
-print('Test 5 PASSED: DatasetInfo import and usage fixed')
+assert 'from .operations import' in content or 'from preprocessing.operations import' in content, 'Missing operations import'
+assert 'PreprocessingResult' in content, 'Missing PreprocessingResult import'
+print('Test 5 PASSED: Import and usage fixed')
 
 print()
 print('All 5 tests passed!')

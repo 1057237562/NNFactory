@@ -13,7 +13,8 @@ from torch.utils.data import DataLoader, TensorDataset
 from torchvision import transforms
 from PIL import Image
 
-from device_utils import (  # pyright: ignore[reportImplicitRelativeImport]
+from .preprocessing_metadata import PreprocessingMetadata
+from .device_utils import (
     resolve_device,
     get_device_name,
     is_cuda_available,
@@ -136,6 +137,7 @@ class TrainingEngine:
         self._stop_event = threading.Event()
         self._temp_path: Optional[str] = None
         self._weights_path: Optional[str] = None
+        self._preprocessing_meta: Optional[PreprocessingMetadata] = None
         os.makedirs(self.TEMP_DIR, exist_ok=True)
 
     def _build_model(self, device: str = "cpu") -> Any:
@@ -164,9 +166,42 @@ class TrainingEngine:
         spec.loader.exec_module(module)
         return module
 
+    @staticmethod
+    def _prune_old_checkpoints(model_name: str, keep: int = 3) -> None:
+        """Remove older checkpoint files for *model_name*, keeping only the *keep* most recent.
+
+        Deletes both ``.pth`` weights and their ``.pth.meta.json`` companion files.
+        Called automatically after each successful training run.
+        """
+        temp_dir = TrainingEngine.TEMP_DIR
+        if not os.path.isdir(temp_dir):
+            return
+
+        prefix = f"{model_name}_"
+        checkpoints = [
+            f for f in os.listdir(temp_dir)
+            if f.endswith(".pth") and f.startswith(prefix)
+        ]
+        # Sort by modification time, newest first
+        checkpoints.sort(key=lambda f: os.path.getmtime(os.path.join(temp_dir, f)), reverse=True)
+
+        for old in checkpoints[keep:]:
+            old_path = os.path.join(temp_dir, old)
+            try:
+                os.remove(old_path)
+            except OSError:
+                pass
+            meta_path = old_path + ".meta.json"
+            if os.path.exists(meta_path):
+                try:
+                    os.remove(meta_path)
+                except OSError:
+                    pass
+
     def _cleanup(self) -> None:
         self._temp_path = None
         self._weights_path = None
+        self._preprocessing_meta = None
 
     @staticmethod
     def _check_gpu_memory(tensor_size_bytes: int, device: str = "cuda") -> bool:
@@ -258,8 +293,8 @@ class TrainingEngine:
 
         return train_loader, val_loader
 
-    @staticmethod
     def _create_gpu_resident_loaders(
+        self,
         ds_info: dict[str, Any],
         config: dict[str, Any],
         device: str
@@ -304,12 +339,37 @@ class TrainingEngine:
                     x_matrix[i, j] = 0
 
         # Skip redundant normalization if dataset was already preprocessed
-        if not ds_info.get("metadata", {}).get("is_normalized", False):
+        meta = ds_info.get("metadata", {})
+        is_normalized = meta.get("is_normalized", False)
+        if not is_normalized:
             mean = x_matrix.mean(axis=0)
             std = x_matrix.std(axis=0) + 1e-8
             x_normalized = (x_matrix - mean) / std
         else:
             x_normalized = x_matrix
+            mean = None
+            std = None
+
+        self._preprocessing_meta = PreprocessingMetadata(
+            dataset_type="tabular_csv",
+            dataset_id=ds_info.get("id", ""),
+            feature_columns=feature_cols,
+            numeric_columns=numeric_cols,
+            label_column=label_col,
+            is_normalized=is_normalized,
+            normalization_mean=mean.tolist() if mean is not None else [],
+            normalization_std=std.tolist() if std is not None else [],
+            input_shape=[len(cols_to_use)],
+            num_classes=num_classes,
+            class_names=ds_info.get("class_names", []),
+            one_hot_encoders=meta.get("one_hot_encoders", {}),
+            label_encoders=meta.get("label_encoders", {}),
+            ordinal_encoders=meta.get("ordinal_encoders", {}),
+            target_encoders=meta.get("target_encoders", {}),
+            frequency_encoders=meta.get("frequency_encoders", {}),
+            binary_encoders=meta.get("binary_encoders", {}),
+            hash_encoders=meta.get("hash_encoders", {}),
+        )
 
         x_tensor = torch.tensor(x_normalized, dtype=torch.float32)
         y_tensor = torch.tensor(y, dtype=torch.long)
@@ -319,7 +379,7 @@ class TrainingEngine:
             x_tensor.nelement() * x_tensor.element_size()
             + y_tensor.nelement() * y_tensor.element_size()
         )
-        gpu_ok = TrainingEngine._check_gpu_memory(bytes_needed, device)
+        gpu_ok = self._check_gpu_memory(bytes_needed, device)
 
         n = x_tensor.size(0)
         train_size = int(n * (1 - val_ratio))
@@ -371,9 +431,12 @@ class TrainingEngine:
         if dataset_type == "image_classification":
             normalize: transforms.Normalize
             if input_size[0] == 3:
-                normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+                img_mean = [0.485, 0.456, 0.406]
+                img_std = [0.229, 0.224, 0.225]
             else:
-                normalize = transforms.Normalize(mean=[0.5], std=[0.5])
+                img_mean = [0.5]
+                img_std = [0.5]
+            normalize = transforms.Normalize(mean=img_mean, std=img_std)
             transform = transforms.Compose([
                 transforms.Resize((input_size[1], input_size[2])),
                 transforms.ToTensor(),
@@ -381,6 +444,17 @@ class TrainingEngine:
             ])
             train_loader, val_loader = self._build_image_data_loaders(
                 data_path, transform, batch_size, val_ratio
+            )
+            self._preprocessing_meta = PreprocessingMetadata(
+                dataset_type="image_classification",
+                dataset_id=ds_info.get("id", ""),
+                input_shape=input_size,
+                resize_height=input_size[1] if len(input_size) > 1 else 224,
+                resize_width=input_size[2] if len(input_size) > 2 else 224,
+                image_normalization_mean=img_mean,
+                image_normalization_std=img_std,
+                num_classes=num_classes,
+                class_names=ds_info.get("class_names", []),
             )
             return train_loader, val_loader, num_classes
 
@@ -392,6 +466,16 @@ class TrainingEngine:
             ])
             train_loader, val_loader = self._build_image_data_loaders(
                 data_path, transform, batch_size, val_ratio
+            )
+            self._preprocessing_meta = PreprocessingMetadata(
+                dataset_type="image_folder",
+                dataset_id=ds_info.get("id", ""),
+                input_shape=input_size,
+                resize_height=input_size[1] if len(input_size) > 1 else 224,
+                resize_width=input_size[2] if len(input_size) > 2 else 224,
+                image_normalization_mean=[0.5],
+                image_normalization_std=[0.5],
+                num_classes=num_classes,
             )
             return train_loader, val_loader, num_classes
 
@@ -426,12 +510,38 @@ class TrainingEngine:
                         x_matrix[i, j] = 0
 
             # Skip redundant normalization if dataset was already preprocessed with normalization
-            if not ds_info.get("metadata", {}).get("is_normalized", False):
+            meta = ds_info.get("metadata", {})
+            is_normalized = meta.get("is_normalized", False)
+            if not is_normalized:
                 mean = x_matrix.mean(axis=0)
                 std = x_matrix.std(axis=0) + 1e-8
                 x_normalized = (x_matrix - mean) / std
             else:
                 x_normalized = x_matrix
+                mean = None
+                std = None
+
+            # Capture preprocessing metadata for evaluation replay
+            self._preprocessing_meta = PreprocessingMetadata(
+                dataset_type="tabular_csv",
+                dataset_id=ds_info.get("id", ""),
+                feature_columns=feature_cols,
+                numeric_columns=numeric_cols,
+                label_column=label_col,
+                is_normalized=is_normalized,
+                normalization_mean=mean.tolist() if mean is not None else [],
+                normalization_std=std.tolist() if std is not None else [],
+                input_shape=[len(cols_to_use)],
+                num_classes=num_classes,
+                class_names=ds_info.get("class_names", []),
+                one_hot_encoders=meta.get("one_hot_encoders", {}),
+                label_encoders=meta.get("label_encoders", {}),
+                ordinal_encoders=meta.get("ordinal_encoders", {}),
+                target_encoders=meta.get("target_encoders", {}),
+                frequency_encoders=meta.get("frequency_encoders", {}),
+                binary_encoders=meta.get("binary_encoders", {}),
+                hash_encoders=meta.get("hash_encoders", {}),
+            )
 
             x_tensor = torch.tensor(x_normalized, dtype=torch.float32)
             y_tensor = torch.tensor(y, dtype=torch.long)
@@ -605,6 +715,13 @@ class TrainingEngine:
             weights_filename = f"{self.blueprint.model_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pth"
             self._weights_path = os.path.join(self.TEMP_DIR, weights_filename)
             torch.save(model.state_dict(), self._weights_path)
+
+            # Save preprocessing metadata sidecar alongside weights
+            if self._preprocessing_meta is not None:
+                self._preprocessing_meta.save(self._weights_path)
+
+            # Keep only the 3 most recent checkpoints for this model
+            self._prune_old_checkpoints(self.blueprint.model_name, keep=3)
 
             yield {
                 "type": "complete",

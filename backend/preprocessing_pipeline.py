@@ -9,7 +9,7 @@ from typing import Any, Optional
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 
-from dataset_manager import DatasetManager, DatasetInfo
+from .dataset_manager import DatasetManager, DatasetInfo
 
 
 @dataclass
