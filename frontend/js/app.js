@@ -10,12 +10,12 @@ class App {
         this.evaluator = new EvaluatorUI();
         this.evaluator.init();
 
-        this._trainingActive = false;
-        this._trainingState = null; // 'running' | 'complete' | 'error' | null
-        this._trainingCompleted = false;
         this._backendOnline = false;
         this._availableDevices = ['cpu'];
         this._backendCheckInterval = null;
+        
+        this.training = new TrainingManager(this);
+        this.weights = new WeightsManager(this);
         
         window.app = this;
         
@@ -160,51 +160,51 @@ class App {
     init() {
         this.setupEventListeners();
         this.setupCategoryToggles();
-        this.setupTrainingStatusBar();
+        this.training.setupTrainingStatusBar();
         this.renderConnections();
     }
     
     setupEventListeners() {
         document.getElementById('generateBtn').addEventListener('click', () => this.generateCode());
         document.getElementById('validateBtn').addEventListener('click', () => this.validateBlueprint());
-        document.getElementById('trainBtn').addEventListener('click', () => this.openTrainModal());
+        document.getElementById('trainBtn').addEventListener('click', () => this.training.openTrainModal());
         document.getElementById('evaluateBtn').addEventListener('click', () => this.evaluator.open());
         document.getElementById('exportBtn').addEventListener('click', () => this.exportBlueprint());
-        document.getElementById('weightsBtn').addEventListener('click', () => this.openWeightsModal());
+        document.getElementById('weightsBtn').addEventListener('click', () => this.weights.openWeightsModal());
         document.getElementById('importBtn').addEventListener('click', () => document.getElementById('fileInput').click());
         document.getElementById('fileInput').addEventListener('change', (e) => this.importBlueprint(e));
         document.getElementById('clearBtn').addEventListener('click', () => this.clearCanvas());
         
         document.getElementById('closeModal').addEventListener('click', () => this.closeCodeModal());
-        document.getElementById('closeTrainModal').addEventListener('click', () => this.closeTrainModal());
+        document.getElementById('closeTrainModal').addEventListener('click', () => this.training.closeTrainModal());
         document.getElementById('closeEvalModal').addEventListener('click', () => this.evaluator.close());
-        document.getElementById('closeWeightsModal').addEventListener('click', () => this.closeWeightsModal());
+        document.getElementById('closeWeightsModal').addEventListener('click', () => this.weights.closeWeightsModal());
         
         document.querySelectorAll('.modal-overlay').forEach(overlay => {
             overlay.addEventListener('click', (e) => {
                 this.closeCodeModal();
-                this.closeTrainModal();
+                this.training.closeTrainModal();
                 if (this.evaluator) this.evaluator.close();
                 this.closeDatasetModal();
-                this.closeWeightsModal();
+                this.weights.closeWeightsModal();
             });
         });
         
         document.getElementById('copyCode').addEventListener('click', () => this.copyCode());
         document.getElementById('downloadCode').addEventListener('click', () => this.downloadCode());
-        document.getElementById('startTrainingBtn').addEventListener('click', () => this.startTraining());
-        document.getElementById('stopTrainingBtn').addEventListener('click', () => this.stopTraining());
-        document.getElementById('trainAgainBtn').addEventListener('click', () => this.resetTrainModal());
-        document.getElementById('exportWeightsBtn').addEventListener('click', () => this.exportWeights());
-        document.getElementById('purgeWeightsBtn').addEventListener('click', () => this.purgeWeights());
+        document.getElementById('startTrainingBtn').addEventListener('click', () => this.training.startTraining());
+        document.getElementById('stopTrainingBtn').addEventListener('click', () => this.training.stopTraining());
+        document.getElementById('trainAgainBtn').addEventListener('click', () => this.training.resetTrainModal());
+        document.getElementById('exportWeightsBtn').addEventListener('click', () => this.weights.exportWeights());
+        document.getElementById('purgeWeightsBtn').addEventListener('click', () => this.weights.purgeWeights());
         
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 this.closeCodeModal();
-                this.closeTrainModal();
+                this.training.closeTrainModal();
                 if (this.evaluator) this.evaluator.close();
                 this.closeDatasetModal();
-                this.closeWeightsModal();
+                this.weights.closeWeightsModal();
             }
             if ((e.key === 'Delete' || e.key === 'Backspace') && !this.isInputFocused()) {
                 if (this.connectionManager.selectedConnections.size > 0) {
@@ -434,492 +434,6 @@ class App {
         }, 3000);
     }
     
-    openTrainModal() {
-        if (this.nodeManager.getNodesArray().length === 0 && !this._trainingActive && !this._trainingCompleted) {
-            this.showToast('Add layers to the canvas first!', 'warning');
-            return;
-        }
-        if (this._trainingActive || this._trainingCompleted) {
-            this.restoreTrainModal();
-        } else {
-            this.resetTrainModal();
-        }
-        this.populateDatasetSelector();
-        document.getElementById('trainModal').classList.add('active');
-    }
-
-    async populateDatasetSelector() {
-        const select = document.getElementById('trainDataset');
-        select.value = '';
-        try {
-            const res = await fetch('http://localhost:8000/datasets');
-            const data = await res.json();
-            const datasets = data.datasets || [];
-            select.innerHTML = '<option value="">Synthetic (random data)</option>';
-            datasets.forEach(ds => {
-                const opt = document.createElement('option');
-                opt.value = ds.id;
-                opt.textContent = `${ds.name} (${ds.num_samples} samples, ${ds.num_classes || '?'} classes)`;
-                select.appendChild(opt);
-            });
-        } catch (e) {}
-        this.updateSyntheticFields();
-        select.addEventListener('change', () => this.updateSyntheticFields());
-    }
-
-    updateSyntheticFields() {
-        const datasetId = document.getElementById('trainDataset').value;
-        const show = !datasetId;
-        document.querySelectorAll('#syntheticFields, #syntheticFields2, #syntheticFields3, #syntheticFields4').forEach(el => {
-            el.style.display = show ? '' : 'none';
-        });
-    }
-    
-    closeTrainModal() {
-        document.getElementById('trainModal').classList.remove('active');
-        if (this._trainingActive && this._trainingState === 'running') {
-            this.showTrainingStatusBar();
-        }
-    }
-
-    setupTrainingStatusBar() {
-        const bar = document.getElementById('trainStatusBar');
-        bar.addEventListener('click', (e) => {
-            if (e.target.closest('.train-status-btn')) return;
-            this.restoreTrainModal();
-            document.getElementById('trainModal').classList.add('active');
-        });
-        document.getElementById('trainStatusStopBtn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.stopTraining();
-        });
-        document.getElementById('trainStatusDismiss').addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.hideTrainingStatusBar();
-        });
-    }
-
-    showTrainingStatusBar() {
-        const bar = document.getElementById('trainStatusBar');
-        bar.className = 'train-status-bar active';
-        bar.style.display = '';
-    }
-
-    hideTrainingStatusBar() {
-        document.getElementById('trainStatusBar').style.display = 'none';
-    }
-
-    updateTrainingStatusBar(event) {
-        if (event.type === 'progress' || event.type === 'epoch_end') {
-            document.getElementById('trainStatusEpoch').textContent =
-                `Epoch ${event.epoch}/${event.total_epochs}`;
-            document.getElementById('trainStatusTime').textContent = this.formatTime(event.elapsed);
-            const pct = event.progress !== undefined
-                ? event.progress
-                : (event.epoch / event.total_epochs) * 100;
-            document.getElementById('trainStatusProgress').style.width = pct + '%';
-        }
-        if (event.type === 'complete') {
-            const bar = document.getElementById('trainStatusBar');
-            bar.className = 'train-status-bar complete';
-            document.getElementById('trainStatusIcon').innerHTML =
-                '<svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">' +
-                '<path d="M7 0a7 7 0 100 14A7 7 0 007 0zm3.29 4.29a.5.5 0 01.71.71l-4.5 4.5a.5.5 0 01-.71 0l-2.5-2.5a.5.5 0 01.71-.71L6 8.29l3.79-3.8a.5.5 0 01.5-.2z"/></svg>';
-            document.getElementById('trainStatusText').textContent = 'Training Complete';
-            document.getElementById('trainStatusStopBtn').style.display = 'none';
-        }
-        if (event.type === 'error') {
-            const bar = document.getElementById('trainStatusBar');
-            bar.className = 'train-status-bar error';
-            document.getElementById('trainStatusIcon').innerHTML =
-                '<svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">' +
-                '<path d="M7 0a7 7 0 100 14A7 7 0 007 0zm3.54 10.46a.5.5 0 01-.71.71L7 8.21l-2.83 2.83a.5.5 0 01-.71-.71L6.29 7.5 3.46 4.67a.5.5 0 01.71-.71L7 6.79l2.83-2.83a.5.5 0 01.71.71L7.71 7.5l2.83 2.83z"/></svg>';
-            document.getElementById('trainStatusText').textContent = 'Training Failed';
-            document.getElementById('trainStatusStopBtn').style.display = 'none';
-        }
-    }
-
-    restoreTrainModal() {
-        document.getElementById('trainConfig').style.display =
-            (this._trainingActive || this._trainingCompleted) ? 'none' : '';
-        document.getElementById('trainProgress').style.display =
-            (this._trainingState === 'running') ? '' : 'none';
-        document.getElementById('trainResults').style.display =
-            (this._trainingState === 'complete') ? '' : 'none';
-        document.getElementById('stopTrainingBtn').style.display =
-            (this._trainingState === 'running') ? '' : 'none';
-    }
-
-    resetTrainModal() {
-        document.getElementById('trainConfig').style.display = '';
-        document.getElementById('trainProgress').style.display = 'none';
-        document.getElementById('trainResults').style.display = 'none';
-        document.getElementById('stopTrainingBtn').style.display = 'none';
-        document.getElementById('startTrainingBtn').disabled = false;
-        this._trainHistory = null;
-        this._trainChart = null;
-        this._weightsFilename = null;
-        this.hideTrainingStatusBar();
-    }
-    
-    async startTraining() {
-        const blueprint = this.getBlueprint();
-        const datasetId = document.getElementById('trainDataset').value;
-        
-        const baseConfig = {
-            blueprint,
-            epochs: parseInt(document.getElementById('trainEpochs').value) || 10,
-            learning_rate: parseFloat(document.getElementById('trainLR').value) || 0.001,
-            batch_size: parseInt(document.getElementById('trainBatchSize').value) || 32,
-            optimizer: document.getElementById('trainOptimizer').value,
-            loss_function: document.getElementById('trainLoss').value,
-            scheduler: document.getElementById('trainScheduler').value,
-            weight_decay: parseFloat(document.getElementById('trainWeightDecay').value) || 0.0,
-            step_size: 30,
-            gamma: 0.1,
-            val_ratio: 0.2
-        };
-
-        let config;
-        let url;
-
-        if (datasetId) {
-            config = { ...baseConfig, dataset_id: datasetId };
-            url = 'http://localhost:8000/train/dataset';
-        } else {
-            config = {
-                ...baseConfig,
-                input_size: [
-                    parseInt(document.getElementById('trainInputC').value) || 3,
-                    parseInt(document.getElementById('trainInputH').value) || 32,
-                    parseInt(document.getElementById('trainInputW').value) || 32
-                ],
-                num_classes: parseInt(document.getElementById('trainNumClasses').value) || 10,
-                num_samples: parseInt(document.getElementById('trainSamples').value) || 1000,
-            };
-            url = 'http://localhost:8000/train';
-        }
-        
-        document.getElementById('trainConfig').style.display = 'none';
-        document.getElementById('trainProgress').style.display = '';
-        document.getElementById('trainResults').style.display = 'none';
-        document.getElementById('stopTrainingBtn').style.display = '';
-        document.getElementById('startTrainingBtn').disabled = true;
-        
-        this._trainHistory = { train_loss: [], val_loss: [], train_acc: [], val_acc: [] };
-        this._trainChart = new TrainingChart('trainChart');
-        this._trainLog = [];
-
-        this._trainingActive = true;
-        this._trainingState = 'running';
-        this._trainingCompleted = false;
-        this._trainAbortController = new AbortController();
-        
-        try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(config),
-                signal: this._trainAbortController.signal
-            });
-            
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let buffer = '';
-            
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split('\n');
-                buffer = lines.pop() || '';
-                
-                for (const line of lines) {
-                    if (!line.startsWith('data: ')) continue;
-                    const event = JSON.parse(line.slice(6));
-                    this.handleTrainEvent(event);
-                }
-            }
-        } catch (error) {
-            if (error.name === 'AbortError') {
-                return;
-            }
-            // If training already completed successfully, don't clobber the state.
-            // This guards against spurious reader.read() errors when the SSE
-            // connection closes after the final 'complete' event.
-            if (this._trainingState === 'complete' || this._trainingCompleted) {
-                return;
-            }
-            this._trainingActive = false;
-            this._trainingState = 'error';
-            this.showToast('Training failed: ' + error.message, 'error');
-            this.resetTrainModal();
-            this.hideTrainingStatusBar();
-        } finally {
-            this._trainAbortController = null;
-        }
-    }
-    
-    async stopTraining() {
-        if (this._trainAbortController) {
-            this._trainAbortController.abort();
-        }
-        try {
-            await fetch('http://localhost:8000/train/stop', { method: 'POST' });
-        } catch (e) {}
-        this._trainingActive = false;
-        this._trainingState = null;
-        this._trainingCompleted = false;
-        this.hideTrainingStatusBar();
-        this.showToast('Training stopped', 'info');
-    }
-    
-    handleTrainEvent(event) {
-        if (event.type === 'device_info') {
-            this.addTrainLog(`Device: ${event.device}`);
-            if (event.requested !== 'cpu' && event.actual === 'cpu') {
-                const deviceType = event.device_type || event.requested;
-                const deviceLabels = {
-                    cuda: 'NVIDIA CUDA',
-                    rocm: 'AMD ROCm',
-                    xpu: 'Intel XPU',
-                    mps: 'Apple MPS'
-                };
-                const label = deviceLabels[deviceType] || deviceType.toUpperCase();
-                this.showToast(`${label} unavailable, training on CPU.`, 'warning');
-            }
-        }
-        
-        if (event.type === 'progress') {
-            document.getElementById('trainEpochLabel').textContent = `Epoch ${event.epoch}/${event.total_epochs}`;
-            document.getElementById('trainTimeLabel').textContent = this.formatTime(event.elapsed);
-            document.getElementById('trainProgressBar').style.width = event.progress + '%';
-            document.getElementById('metricTrainLoss').textContent = event.train_loss.toFixed(4);
-            document.getElementById('metricTrainAcc').textContent = event.train_acc.toFixed(1) + '%';
-            this.updateTrainingStatusBar(event);
-        }
-        
-        if (event.type === 'epoch_end') {
-            document.getElementById('trainEpochLabel').textContent = `Epoch ${event.epoch}/${event.total_epochs}`;
-            document.getElementById('trainTimeLabel').textContent = this.formatTime(event.elapsed);
-            document.getElementById('trainProgressBar').style.width = ((event.epoch / event.total_epochs) * 100) + '%';
-            document.getElementById('metricTrainLoss').textContent = event.train_loss.toFixed(4);
-            document.getElementById('metricValLoss').textContent = event.val_loss.toFixed(4);
-            document.getElementById('metricTrainAcc').textContent = event.train_acc.toFixed(1) + '%';
-            document.getElementById('metricValAcc').textContent = event.val_acc.toFixed(1) + '%';
-            
-            this._trainHistory = event.history;
-            this._trainChart.update(this._trainHistory);
-            
-            this.addTrainLog(`Epoch ${event.epoch}/${event.total_epochs} | Loss: ${event.train_loss.toFixed(4)} | Val Loss: ${event.val_loss.toFixed(4)} | Acc: ${event.train_acc.toFixed(1)}% | Val Acc: ${event.val_acc.toFixed(1)}%`);
-            this.updateTrainingStatusBar(event);
-        }
-        
-        if (event.type === 'complete') {
-            this._trainingActive = false;
-            this._trainingState = 'complete';
-            this._trainingCompleted = true;
-            document.getElementById('stopTrainingBtn').style.display = 'none';
-            document.getElementById('trainProgress').style.display = 'none';
-            document.getElementById('trainResults').style.display = '';
-            document.getElementById('resultTrainLoss').textContent = event.final_train_loss.toFixed(4);
-            document.getElementById('resultValLoss').textContent = event.final_val_loss.toFixed(4);
-            document.getElementById('resultTrainAcc').textContent = event.final_train_acc.toFixed(1) + '%';
-            document.getElementById('resultValAcc').textContent = event.final_val_acc.toFixed(1) + '%';
-            document.getElementById('resultParams').textContent = event.total_params.toLocaleString();
-            document.getElementById('resultTime').textContent = this.formatTime(event.total_time);
-            this._weightsFilename = event.weights_path || null;
-            this.updateTrainingStatusBar(event);
-            this.showToast('Training complete!', 'success');
-        }
-
-        if (event.type === 'stopped') {
-            if (!this._trainingActive) return;
-            this._trainingActive = false;
-            this._trainingState = 'complete';
-            this._trainingCompleted = true;
-            document.getElementById('stopTrainingBtn').style.display = 'none';
-            document.getElementById('trainProgress').style.display = 'none';
-            document.getElementById('trainResults').style.display = '';
-            if (event.history && event.history.train_loss && event.history.train_loss.length > 0) {
-                const last = event.history.train_loss.length - 1;
-                document.getElementById('resultTrainLoss').textContent = event.history.train_loss[last].toFixed(4);
-                document.getElementById('resultValLoss').textContent = (event.history.val_loss[last] || 0).toFixed(4);
-                document.getElementById('resultTrainAcc').textContent = event.history.train_acc[last].toFixed(1) + '%';
-                document.getElementById('resultValAcc').textContent = (event.history.val_acc[last] || 0).toFixed(1) + '%';
-                this._trainHistory = event.history;
-                if (this._trainChart) this._trainChart.update(this._trainHistory);
-            } else {
-                document.getElementById('resultTrainLoss').textContent = '-';
-                document.getElementById('resultValLoss').textContent = '-';
-                document.getElementById('resultTrainAcc').textContent = '-';
-                document.getElementById('resultValAcc').textContent = '-';
-            }
-            document.getElementById('resultParams').textContent = '-';
-            document.getElementById('resultTime').textContent = this.formatTime(event.total_time || 0);
-            this._weightsFilename = null;
-        }
-        
-        if (event.type === 'error') {
-            this._trainingActive = false;
-            this._trainingState = 'error';
-            document.getElementById('stopTrainingBtn').style.display = 'none';
-            this.showToast(event.message, 'error');
-            this.addTrainLog(`ERROR: ${event.message}`);
-            this.updateTrainingStatusBar(event);
-        }
-    }
-    
-    addTrainLog(message) {
-        const log = document.getElementById('trainLog');
-        const entry = document.createElement('div');
-        entry.className = 'train-log-entry';
-        entry.textContent = message;
-        log.appendChild(entry);
-        log.scrollTop = log.scrollHeight;
-    }
-    
-    formatTime(seconds) {
-        const m = Math.floor(seconds / 60);
-        const s = Math.floor(seconds % 60);
-        return `${m}:${s.toString().padStart(2, '0')}`;
-    }
-    
-    async exportWeights() {
-        if (!this._weightsFilename) {
-            this.showToast('No trained model weights available. Train a model first.', 'warning');
-            return;
-        }
-        
-        const modelName = document.getElementById('modelName').value || 'NeuralNetwork';
-        const url = `http://localhost:8000/weights/${this._weightsFilename}`;
-        
-        try {
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error('Weights file not found on server');
-            }
-            const blob = await response.blob();
-            window.Utils.downloadBlob(blob, `${modelName.toLowerCase()}_weights.pth`);
-            this.showToast('Weights exported successfully!', 'success');
-        } catch (error) {
-            this.showToast('Failed to export weights: ' + error.message, 'error');
-        }
-    }
-    
-    async openWeightsModal() {
-        document.getElementById('weightsModal').classList.add('active');
-        await this.loadWeightsList();
-    }
-    
-    closeWeightsModal() {
-        document.getElementById('weightsModal').classList.remove('active');
-    }
-    
-    async loadWeightsList() {
-        const container = document.getElementById('weightsList');
-        const emptyState = document.getElementById('weightsEmpty');
-        
-        try {
-            const res = await fetch('http://localhost:8000/weights');
-            const data = await res.json();
-            const weights = data.weights || [];
-            
-            if (weights.length === 0) {
-                emptyState.style.display = '';
-                container.querySelectorAll('.weight-item').forEach(el => el.remove());
-                return;
-            }
-            
-            emptyState.style.display = 'none';
-            container.querySelectorAll('.weight-item').forEach(el => el.remove());
-            
-            weights.forEach(w => {
-                const item = document.createElement('div');
-                item.className = 'weight-item';
-                const name = w.filename.replace(/\.pth$/, '').replace(/_\d{8}_\d{6}$/, '');
-                const time = new Date(w.modified * 1000).toLocaleString();
-                item.innerHTML = `
-                    <div class="weight-info">
-                        <span class="weight-name">${name}</span>
-                        <span class="weight-meta">${w.size_human} · ${time}</span>
-                    </div>
-                    <div class="weight-actions">
-                        <button class="btn btn-sm btn-primary weight-download-btn" data-filename="${w.filename}" title="Download">
-                            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-                                <path d="M7 1v7M4 5l3 3 3-3M2 10v2a1 1 0 001 1h8a1 1 0 001-1v-2" fill="none" stroke="currentColor" stroke-width="1.5"/>
-                            </svg>
-                            Download
-                        </button>
-                        <button class="btn btn-sm btn-danger weight-delete-btn" data-filename="${w.filename}" title="Delete">
-                            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-                                <path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6zM14.5 3a1 1 0 00-1-1H13V1a.5.5 0 00-1 0v1H8V1a.5.5 0 00-1 0v1H5.5l-.707-.707A.5.5 0 004 1.5v.5H2.5a.5.5 0 000 1H3v10a1 1 0 001 1h8a1 1 0 001-1V3h.5a.5.5 0 00.5-.5zM5 2h6v1H5V2zM4 3h8v10H4V3z"/>
-                            </svg>
-                        </button>
-                    </div>
-                `;
-                container.appendChild(item);
-            });
-            
-            container.querySelectorAll('.weight-download-btn').forEach(btn => {
-                btn.addEventListener('click', () => this.downloadWeight(btn.dataset.filename));
-            });
-            
-            container.querySelectorAll('.weight-delete-btn').forEach(btn => {
-                btn.addEventListener('click', () => this.deleteWeight(btn.dataset.filename));
-            });
-        } catch (error) {
-            this.showToast('Failed to load weights: ' + error.message, 'error');
-        }
-    }
-    
-    async downloadWeight(filename) {
-        try {
-            const response = await fetch(`http://localhost:8000/weights/${filename}`);
-            if (!response.ok) {
-                throw new Error('Weights file not found');
-            }
-            const blob = await response.blob();
-            window.Utils.downloadBlob(blob, filename);
-            this.showToast('Weights downloaded!', 'success');
-        } catch (error) {
-            this.showToast('Failed to download: ' + error.message, 'error');
-        }
-    }
-    
-    async deleteWeight(filename) {
-        if (!confirm(`Delete ${filename}?`)) return;
-        try {
-            const response = await fetch(`http://localhost:8000/weights/${filename}`, { method: 'DELETE' });
-            const data = await response.json();
-            if (data.status === 'deleted') {
-                this.showToast('Weights deleted', 'success');
-                await this.loadWeightsList();
-            } else {
-                this.showToast('Failed to delete weights', 'error');
-            }
-        } catch (error) {
-            this.showToast('Failed to delete: ' + error.message, 'error');
-        }
-    }
-    
-    async purgeWeights() {
-        if (!confirm('Delete all trained weights? This cannot be undone.')) return;
-        try {
-            const response = await fetch('http://localhost:8000/weights/purge', { method: 'POST' });
-            const data = await response.json();
-            if (data.status === 'purged') {
-                this.showToast('All weights purged', 'success');
-                await this.loadWeightsList();
-            } else {
-                this.showToast('Failed to purge weights', 'error');
-            }
-        } catch (error) {
-            this.showToast('Failed to purge: ' + error.message, 'error');
-        }
-    }
-    
     openEvalModal() {
         if (this.evaluator) this.evaluator.open();
     }
@@ -932,98 +446,6 @@ class App {
         document.getElementById('datasetModal').classList.remove('active');
     }
 }
-
-class TrainingChart {
-    constructor(canvasId) {
-        this.canvas = document.getElementById(canvasId);
-        this.ctx = this.canvas.getContext('2d');
-        this.resize();
-        window.addEventListener('resize', () => this.resize());
-    }
-    
-    resize() {
-        const rect = this.canvas.parentElement.getBoundingClientRect();
-        this.canvas.width = rect.width * window.devicePixelRatio;
-        this.canvas.height = rect.height * window.devicePixelRatio;
-        this.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-        this.width = rect.width;
-        this.height = rect.height;
-    }
-    
-    update(history) {
-        this.ctx.clearRect(0, 0, this.width, this.height);
-        this.drawChart(history.train_loss, history.val_loss, history.train_acc, history.val_acc);
-    }
-    
-    drawChart(trainLoss, valLoss, trainAcc, valAcc) {
-        const padding = { top: 20, right: 20, bottom: 30, left: 50 };
-        const chartW = this.width - padding.left - padding.right;
-        const chartH = this.height - padding.top - padding.bottom;
-        const midY = padding.top + chartH / 2;
-        
-        this.ctx.strokeStyle = 'rgba(42, 42, 74, 0.5)';
-        this.ctx.lineWidth = 1;
-        this.ctx.setLineDash([4, 4]);
-        this.ctx.beginPath();
-        this.ctx.moveTo(padding.left, midY);
-        this.ctx.lineTo(padding.left + chartW, midY);
-        this.ctx.stroke();
-        this.ctx.setLineDash([]);
-        
-        this.drawLines(trainLoss, valLoss, padding, chartW, chartH, 'loss');
-        this.drawLines(trainAcc, valAcc, padding, chartW, chartH, 'acc');
-        
-        this.ctx.font = '11px Inter, sans-serif';
-        this.ctx.fillStyle = '#6366f1';
-        this.ctx.fillText('Train Loss', padding.left, 14);
-        this.ctx.fillStyle = '#ef4444';
-        this.ctx.fillText('Val Loss', padding.left + 80, 14);
-        this.ctx.fillStyle = '#22c55e';
-        this.ctx.fillText('Train Acc', padding.left + 160, 14);
-        this.ctx.fillStyle = '#f59e0b';
-        this.ctx.fillText('Val Acc', padding.left + 240, 14);
-    }
-    
-    drawLines(trainData, valData, padding, chartW, chartH, type) {
-        if (!trainData || trainData.length < 2) return;
-        
-        const epochs = trainData.length;
-        const allValues = [...trainData, ...valData];
-        let minVal = Math.min(...allValues);
-        let maxVal = Math.max(...allValues);
-        
-        if (maxVal === minVal) { maxVal += 1; minVal -= 1; }
-        const range = maxVal - minVal;
-        
-        const getX = (i) => padding.left + (i / (epochs - 1)) * chartW;
-        const getY = (v) => padding.top + chartH - ((v - minVal) / range) * chartH;
-        
-        const colors = { loss: { train: '#6366f1', val: '#ef4444' }, acc: { train: '#22c55e', val: '#f59e0b' } };
-        
-        this.drawLine(trainData, getX, getY, colors[type].train);
-        this.drawLine(valData, getX, getY, colors[type].val);
-    }
-    
-    drawLine(data, getX, getY, color) {
-        this.ctx.strokeStyle = color;
-        this.ctx.lineWidth = 2;
-        this.ctx.beginPath();
-        data.forEach((v, i) => {
-            const x = getX(i);
-            const y = getY(v);
-            i === 0 ? this.ctx.moveTo(x, y) : this.ctx.lineTo(x, y);
-        });
-        this.ctx.stroke();
-        
-        this.ctx.fillStyle = color;
-        data.forEach((v, i) => {
-            this.ctx.beginPath();
-            this.ctx.arc(getX(i), getY(v), 3, 0, Math.PI * 2);
-            this.ctx.fill();
-        });
-    }
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    new App();
+window.addEventListener('modals-loaded', () => {
+    window.app = new App();
 });

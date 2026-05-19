@@ -1,0 +1,34 @@
+Task 7: Modal HTML Extraction — Complete
+=========================================
+
+## Summary
+Successfully extracted modal HTML content from index.html into separate partial files.
+
+## Files Modified
+- `frontend/index.html` — 1241 lines → 298 lines (under 750 target ✓)
+  - All 7 modal wrappers reduced to empty `.modal-content` containers
+  - Sidebar layer categories replaced with `<div id="layerItems"></div>`
+  - All element IDs and class names preserved
+
+- `frontend/js/modal-loader.js` — Updated to target `.modal-content` via `querySelector('#${id} > .modal-content')`
+- `frontend/js/app.js` — Changed from `DOMContentLoaded` → `modals-loaded` event listener for `new App()`
+
+## Files Created / Populated
+
+| File | Lines |
+|------|-------|
+| `frontend/html/modals/code-modal.html` | 26 |
+| `frontend/html/modals/train-modal.html` | 171 |
+| `frontend/html/modals/eval-modal.html` | 131 |
+| `frontend/html/modals/dataset-modal.html` | 166 |
+| `frontend/html/modals/pp-node-modal.html` | 7 |
+| `frontend/html/modals/pp-result-modal.html` | 7 |
+| `frontend/html/modals/weights-modal.html` | 27 |
+| `frontend/html/sidebar-layers.html` | 415 |
+
+## Architecture
+- Modal partials loaded into `.modal-content` div (preserves `.modal-overlay` sibling)
+- Sidebar layers loaded into `#layerItems` container
+- `modals-loaded` event fired by modal-loader after all partials + sidebar loaded
+- app.js listens for `modals-loaded` to initialize App
+- All existing event listeners (bound by ID) continue to work since IDs kept in partials
