@@ -38,6 +38,7 @@ class EvaluatorUI {
         this.numClasses = null;
         this.blueprint = null;
         this.csvResultBlob = null;
+        this.featureColumns = [];
     }
 
     init() {
@@ -176,8 +177,10 @@ class EvaluatorUI {
                 if (panel) panel.classList.add('active');
             }
 
-            if (this.modelType === 'tabular' && this.inputShape && this.inputShape.features) {
-                this.buildSingleRowForm(this.inputShape.features);
+            if (this.modelType === 'tabular') {
+                const numFeatures = this.inputShape && this.inputShape.in_features ? this.inputShape.in_features : 0;
+                this.featureColumns = data.feature_columns || [];
+                this.buildSingleRowForm(numFeatures, this.featureColumns);
             }
         } catch (e) {
             this.typeBadge.textContent = 'Unknown';
@@ -454,7 +457,7 @@ class EvaluatorUI {
         window.Utils.downloadBlob(this.csvResultBlob, 'evaluation_results.csv');
     }
 
-    buildSingleRowForm(numFeatures) {
+    buildSingleRowForm(numFeatures, featureColumns) {
         this.singleForm.innerHTML = '';
         for (let i = 0; i < numFeatures; i++) {
             const group = document.createElement('div');
@@ -462,14 +465,16 @@ class EvaluatorUI {
 
             const label = document.createElement('label');
             label.className = 'property-label';
-            label.textContent = `Feature ${i + 1}`;
+            const colName = (featureColumns && featureColumns[i]) ? featureColumns[i] : `Feature ${i + 1}`;
+            label.textContent = colName;
+            label.htmlFor = `evalFeature${i}`;
 
             const input = document.createElement('input');
-            input.type = 'number';
-            input.step = 'any';
+            input.type = 'text';
             input.className = 'property-input';
-            input.placeholder = '0';
+            input.placeholder = colName;
             input.id = `evalFeature${i}`;
+            input.name = colName;
 
             group.appendChild(label);
             group.appendChild(input);
@@ -479,9 +484,13 @@ class EvaluatorUI {
 
     async runSingleEvaluation() {
         const inputs = this.singleForm.querySelectorAll('input');
-        const values = Array.from(inputs).map(inp => parseFloat(inp.value) || 0);
+        const features = {};
+        inputs.forEach(inp => {
+            const colName = inp.name || `feature_${inp.id.replace('evalFeature', '')}`;
+            features[colName] = inp.value;
+        });
 
-        if (values.length === 0) {
+        if (Object.keys(features).length === 0) {
             window.app.showToast('No features to evaluate.', 'warning');
             return;
         }
@@ -497,7 +506,8 @@ class EvaluatorUI {
                 body: JSON.stringify({
                     blueprint: this.blueprint,
                     weights_filename: this.weightSelect.value || '',
-                    features: values
+                    features: features,
+                    unknown_strategy: 'error'
                 })
             });
 

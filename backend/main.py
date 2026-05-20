@@ -162,10 +162,20 @@ async def evaluate_synthetic(config: EvalConfig):
     return result
 
 @app.post("/evaluate/detect-type")
-async def detect_model_type(blueprint: Blueprint):
+async def detect_model_type(blueprint: Blueprint, weights_filename: str = ""):
     try:
         evaluator = CustomEvaluator(blueprint)
         result = evaluator.detect_type()
+
+        # If weights_filename provided, load weights to get preprocessing metadata
+        feature_columns = []
+        if weights_filename:
+            weights_path = os.path.join(CustomEvaluator.TEMP_DIR, weights_filename)
+            if os.path.exists(weights_path):
+                wresult = evaluator.load_weights(weights_path)
+                if wresult.get("valid", True) and evaluator._preprocessing_meta:
+                    feature_columns = evaluator._preprocessing_meta.feature_columns
+
         weights_dir = CustomEvaluator.TEMP_DIR
         weights_available = False
         weights_list = []
@@ -181,7 +191,8 @@ async def detect_model_type(blueprint: Blueprint):
         return {
             **result,
             "weights_available": weights_available,
-            "weights_list": weights_list
+            "weights_list": weights_list,
+            "feature_columns": feature_columns
         }
     except ValueError as e:
         return {"type": "unknown", "input_shape": [], "num_classes": 0, "valid": False, "error": str(e)}
@@ -252,6 +263,7 @@ async def evaluate_tabular_csv(
     blueprint: str = Form(...),
     weights_filename: Optional[str] = Form(None),
     file: UploadFile = File(...),
+    unknown_strategy: str = Form("error"),
 ):
     if not file.filename or not file.filename.endswith(".csv"):
         return {"valid": False, "errors": ["File must be a CSV"]}
@@ -276,7 +288,7 @@ async def evaluate_tabular_csv(
         with open(csv_path, "wb") as f:
             f.write(content)
 
-        result = evaluator.evaluate_tabular_csv(csv_path)
+        result = evaluator.evaluate_tabular_csv(csv_path, unknown_strategy=unknown_strategy)
         if not result.get("valid", True):
             return result
 
