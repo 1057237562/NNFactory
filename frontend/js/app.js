@@ -180,8 +180,9 @@ class App {
         document.getElementById('closeEvalModal').addEventListener('click', () => this.evaluator.close());
         document.getElementById('closeWeightsModal').addEventListener('click', () => this.weights.closeWeightsModal());
         
-        document.querySelectorAll('.modal-overlay').forEach(overlay => {
-            overlay.addEventListener('click', (e) => {
+        // Close modals on backdrop click — only for overlays inside .code-modal containers
+        document.querySelectorAll('.code-modal > .modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', () => {
                 this.closeCodeModal();
                 this.training.closeTrainModal();
                 if (this.evaluator) this.evaluator.close();
