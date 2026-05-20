@@ -148,7 +148,7 @@ def _create_synthetic_dataset(self, config: dict[str, Any]) -> tuple[DataLoader[
 def _create_dataset_from_config(self, config: dict[str, Any]) -> tuple[Any, Any, int]:
     dataset_id: Any = config.get("dataset_id")
     if dataset_id:
-        from ..datasets.manager import DatasetManager
+        from datasets.manager import DatasetManager
         dm = DatasetManager()
         ds_info: Optional[dict[str, Any]] = dm.get_dataset(dataset_id)
         if ds_info:

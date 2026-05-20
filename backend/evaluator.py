@@ -273,7 +273,7 @@ class CustomEvaluator:
         # PATH 1 — TransformReplayEngine: metadata with encoders and/or norm
         # ------------------------------------------------------------------
         if meta and meta.feature_columns:
-            from .preprocessing.encoders import TransformReplayEngine
+            from preprocessing.encoders import TransformReplayEngine
             engine = TransformReplayEngine(meta)
 
             has_encoders = bool(
@@ -410,7 +410,7 @@ class CustomEvaluator:
         meta = self._preprocessing_meta
 
         if meta and meta.feature_columns:
-            from .preprocessing.encoders import TransformReplayEngine
+            from preprocessing.encoders import TransformReplayEngine
 
             engine = TransformReplayEngine(meta)
             encoded = engine.transform_row(features, unknown_strategy)
