@@ -1,4 +1,4 @@
-from .pipeline import PreprocessingPipeline
-from .operations import PreprocessingResult
+from preprocessing.pipeline import PreprocessingPipeline
+from preprocessing.operations import PreprocessingResult
 
 __all__ = ["PreprocessingPipeline", "PreprocessingResult"]

@@ -10,14 +10,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse, Response
 from pydantic import BaseModel
 from typing import Any, Optional
-from .code_generator import CodeGenerator
-from .models.blueprint import Blueprint
-from .training.engine import TrainingEngine
-from .datasets.manager import DatasetManager
-from .preprocessing.pipeline import PreprocessingPipeline
-from .preprocessing.operations import PreprocessingResult
-from .device_utils import is_cuda_available, is_rocm_available, is_xpu_available, is_mps_available
-from .evaluator import CustomEvaluator
+from code_generator import CodeGenerator
+from models.blueprint import Blueprint
+from training.engine import TrainingEngine
+from datasets.manager import DatasetManager
+from preprocessing.pipeline import PreprocessingPipeline
+from preprocessing.operations import PreprocessingResult
+from device_utils import is_cuda_available, is_rocm_available, is_xpu_available, is_mps_available
+from evaluator import CustomEvaluator
 
 app = FastAPI(title="NNFactory Backend", version="1.0.0")
 executor = ThreadPoolExecutor(max_workers=4)

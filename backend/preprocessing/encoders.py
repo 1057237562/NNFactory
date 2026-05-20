@@ -7,7 +7,7 @@ by replaying the same encoder maps that were stored during preprocessing.
 import hashlib
 from typing import Any
 
-from .metadata import PreprocessingMetadata
+from preprocessing.metadata import PreprocessingMetadata
 
 
 class TransformReplayEngine:

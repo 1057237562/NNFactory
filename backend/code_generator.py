@@ -1,6 +1,6 @@
 from typing import Any, Optional
-from .device_utils import get_device_detection_code
-from .models.blueprint import Blueprint, LayerConfig, Connection
+from device_utils import get_device_detection_code
+from models.blueprint import Blueprint, LayerConfig, Connection
 
 class CodeGenerator:
     def __init__(self, blueprint: Blueprint):

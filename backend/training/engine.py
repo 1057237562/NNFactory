@@ -11,8 +11,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
-from ..preprocessing.metadata import PreprocessingMetadata
-from ..device_utils import (
+from preprocessing.metadata import PreprocessingMetadata
+from device_utils import (
     resolve_device,
     get_device_name,
     is_cuda_available,
@@ -20,7 +20,7 @@ from ..device_utils import (
     is_xpu_available,
     is_mps_available,
 )
-from .dataloader import (
+from training.dataloader import (
     DeviceDataLoader,
     _create_synthetic_dataset,
     _create_dataset_from_config,

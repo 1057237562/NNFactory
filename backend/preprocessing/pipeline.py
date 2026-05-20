@@ -6,7 +6,7 @@ import csv
 import hashlib
 import time
 
-from .operations import (
+from preprocessing.operations import (
     PreprocessingResult,
     _apply_remove_samples,
     _apply_balance,

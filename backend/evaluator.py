@@ -10,9 +10,9 @@ import torch.nn.functional as F
 from torchvision import transforms
 from PIL import Image
 
-from .models.blueprint import Blueprint
-from .code_generator import CodeGenerator
-from .preprocessing.metadata import PreprocessingMetadata
+from models.blueprint import Blueprint
+from code_generator import CodeGenerator
+from preprocessing.metadata import PreprocessingMetadata
 
 
 class CustomEvaluator:
