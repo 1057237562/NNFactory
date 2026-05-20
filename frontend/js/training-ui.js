@@ -9,6 +9,8 @@ class TrainingManager {
         this._trainLog = null;
         this._trainAbortController = null;
         this._weightsFilename = null;
+        this._datasets = [];
+        this._onDatasetChange = null;
     }
 
     openTrainModal() {
@@ -28,10 +30,14 @@ class TrainingManager {
     async populateDatasetSelector() {
         const select = document.getElementById('trainDataset');
         select.value = '';
+        if (this._onDatasetChange) {
+            select.removeEventListener('change', this._onDatasetChange);
+        }
         try {
             const res = await fetch('http://localhost:8000/datasets');
             const data = await res.json();
-            const datasets = data.datasets || [];
+            this._datasets = data.datasets || [];
+            const datasets = this._datasets;
             select.innerHTML = '<option value="">Synthetic (random data)</option>';
             datasets.forEach(ds => {
                 const opt = document.createElement('option');
@@ -39,9 +45,27 @@ class TrainingManager {
                 opt.textContent = `${ds.name} (${ds.num_samples} samples, ${ds.num_classes || '?'} classes)`;
                 select.appendChild(opt);
             });
-        } catch (e) {}
+        } catch (e) {
+            this._datasets = [];
+        }
         this.updateSyntheticFields();
-        select.addEventListener('change', () => this.updateSyntheticFields());
+        this._onDatasetChange = () => {
+            this.updateSyntheticFields();
+            this.autoFillNumClasses();
+        };
+        select.addEventListener('change', this._onDatasetChange);
+    }
+
+    autoFillNumClasses() {
+        const select = document.getElementById('trainDataset');
+        const numClassesInput = document.getElementById('trainNumClasses');
+        const datasetId = select.value;
+        if (datasetId && this._datasets) {
+            const ds = this._datasets.find(d => d.id === datasetId);
+            if (ds && ds.num_classes > 0) {
+                numClassesInput.value = ds.num_classes;
+            }
+        }
     }
 
     updateSyntheticFields() {
