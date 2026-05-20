@@ -1,4 +1,4 @@
-from .info import DatasetInfo
-from .manager import DatasetManager
+from datasets.info import DatasetInfo
+from datasets.manager import DatasetManager
 
 __all__ = ["DatasetInfo", "DatasetManager"]

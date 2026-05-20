@@ -8,8 +8,8 @@ from PIL import Image
 from typing import Any, Optional
 from datetime import datetime
 
-from .info import DatasetInfo
-from .stats import (
+from datasets.info import DatasetInfo
+from datasets.stats import (
     get_column_stats,
     _compute_column_relations,
     get_dataloader_config,
