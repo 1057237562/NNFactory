@@ -224,10 +224,29 @@ def _create_gpu_resident_loaders(
         mean = x_matrix.mean(axis=0)
         std = x_matrix.std(axis=0) + 1e-8
         x_normalized = (x_matrix - mean) / std
+        norm_mean_list = mean.tolist()
+        norm_std_list = std.tolist()
     else:
         x_normalized = x_matrix
-        mean = None
-        std = None
+        # Extract stats from preprocessing normalization_stats
+        # Structure: meta["normalization_stats"][method][col_name] = {"mean": ..., "std": ...}
+        norm_stats = meta.get("normalization_stats", {})
+        # Find the first method (zscore, minmax, standard)
+        method_stats = {}
+        for method_name in ("zscore", "minmax", "standard"):
+            if method_name in norm_stats:
+                method_stats = norm_stats[method_name]
+                break
+        if method_stats and numeric_cols:
+            norm_mean_list = [method_stats[col]["mean"] for col in numeric_cols if col in method_stats]
+            norm_std_list = [method_stats[col]["std"] for col in numeric_cols if col in method_stats]
+        else:
+            norm_mean_list = []
+            norm_std_list = []
+        # Fallback to compute from data if extraction failed
+        if not norm_mean_list:
+            norm_mean_list = x_matrix.mean(axis=0).tolist()
+            norm_std_list = (x_matrix.std(axis=0) + 1e-8).tolist()
 
     self._preprocessing_meta = PreprocessingMetadata(
         dataset_type="tabular_csv",
@@ -236,8 +255,8 @@ def _create_gpu_resident_loaders(
         numeric_columns=numeric_cols,
         label_column=label_col,
         is_normalized=is_normalized,
-        normalization_mean=mean.tolist() if mean is not None else [],
-        normalization_std=std.tolist() if std is not None else [],
+        normalization_mean=norm_mean_list,
+        normalization_std=norm_std_list,
         input_shape=[len(cols_to_use)],
         num_classes=num_classes,
         class_names=ds_info.get("class_names", []),
@@ -392,10 +411,29 @@ def _load_real_dataset(self, ds_info: dict[str, Any], config: dict[str, Any], de
             mean = x_matrix.mean(axis=0)
             std = x_matrix.std(axis=0) + 1e-8
             x_normalized = (x_matrix - mean) / std
+            norm_mean_list = mean.tolist()
+            norm_std_list = std.tolist()
         else:
             x_normalized = x_matrix
-            mean = None
-            std = None
+            # Extract stats from preprocessing normalization_stats
+            # Structure: meta["normalization_stats"][method][col_name] = {"mean": ..., "std": ...}
+            norm_stats = meta.get("normalization_stats", {})
+            # Find the first method (zscore, minmax, standard)
+            method_stats = {}
+            for method_name in ("zscore", "minmax", "standard"):
+                if method_name in norm_stats:
+                    method_stats = norm_stats[method_name]
+                    break
+            if method_stats and numeric_cols:
+                norm_mean_list = [method_stats[col]["mean"] for col in numeric_cols if col in method_stats]
+                norm_std_list = [method_stats[col]["std"] for col in numeric_cols if col in method_stats]
+            else:
+                norm_mean_list = []
+                norm_std_list = []
+            # Fallback to compute from data if extraction failed
+            if not norm_mean_list:
+                norm_mean_list = x_matrix.mean(axis=0).tolist()
+                norm_std_list = (x_matrix.std(axis=0) + 1e-8).tolist()
 
         self._preprocessing_meta = PreprocessingMetadata(
             dataset_type="tabular_csv",
@@ -404,8 +442,8 @@ def _load_real_dataset(self, ds_info: dict[str, Any], config: dict[str, Any], de
             numeric_columns=numeric_cols,
             label_column=label_col,
             is_normalized=is_normalized,
-            normalization_mean=mean.tolist() if mean is not None else [],
-            normalization_std=std.tolist() if std is not None else [],
+            normalization_mean=norm_mean_list,
+            normalization_std=norm_std_list,
             input_shape=[len(cols_to_use)],
             num_classes=num_classes,
             class_names=ds_info.get("class_names", []),
