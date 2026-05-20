@@ -233,15 +233,25 @@ class CustomEvaluator:
 
         return {"predictions": predictions, "valid": True}
 
-    def evaluate_tabular_csv(self, csv_path: str) -> dict[str, Any]:
+    def evaluate_tabular_csv(
+        self, csv_path: str, unknown_strategy: str = "error"
+    ) -> dict[str, Any]:
         """Run inference on tabular CSV data and write results with prediction column.
 
         Uses training-derived preprocessing metadata (feature columns,
         normalisation statistics) when available via loaded weights.
         Falls back to auto-detection for legacy models without metadata.
 
+        When preprocessing metadata includes encoder maps or normalisation
+        stats, ``TransformReplayEngine`` replays the stored transformations
+        so raw string values are encoded identically to training time.
+
         Args:
             csv_path: Path to the input CSV file.
+            unknown_strategy: How to handle categories not seen during training.
+                ``"error"`` (default) raises ``ValueError``; ``"fallback"``
+                uses safe defaults (``-1`` for label/ordinal, zeros for
+                one-hot, global mean for target, etc.).
 
         Returns:
             Dict with ``output_path`` and ``valid`` status.
@@ -259,14 +269,66 @@ class CustomEvaluator:
 
         meta = self._preprocessing_meta
 
-        # Use training-derived feature columns when metadata is available
+        # ------------------------------------------------------------------
+        # PATH 1 — TransformReplayEngine: metadata with encoders and/or norm
+        # ------------------------------------------------------------------
         if meta and meta.feature_columns:
-            cols_to_use = [c for c in meta.feature_columns if c in fieldnames]
-            if not cols_to_use:
-                return {"valid": False, "errors": [
-                    f"None of the training feature columns {meta.feature_columns} "
-                    f"found in evaluation CSV columns {fieldnames}"
-                ]}
+            from .preprocessing.encoders import TransformReplayEngine
+            engine = TransformReplayEngine(meta)
+
+            has_encoders = bool(
+                meta.label_encoders or meta.ordinal_encoders
+                or meta.target_encoders or meta.frequency_encoders
+                or meta.one_hot_encoders or meta.binary_encoders
+                or meta.hash_encoders
+            )
+            has_norm = bool(meta.is_normalized and meta.normalization_mean)
+
+            if has_encoders or has_norm:
+                # TransformReplayEngine handles ALL encoding + normalisation
+                n_rows = len(rows)
+                n_cols = len(meta.feature_columns)
+                x_matrix = np.zeros((n_rows, n_cols))
+                for i, row_dict in enumerate(rows):
+                    encoded = engine.transform_row(row_dict, unknown_strategy)
+                    for j, col in enumerate(meta.feature_columns):
+                        x_matrix[i, j] = encoded.get(col, 0.0)
+                x_normalized = x_matrix
+            else:
+                # feature_columns exist but no encoders or norm — use float()
+                cols_to_use = [c for c in meta.feature_columns if c in fieldnames]
+                if not cols_to_use:
+                    return {"valid": False, "errors": [
+                        f"None of the training feature columns "
+                        f"{meta.feature_columns} found in evaluation CSV "
+                        f"columns {fieldnames}"
+                    ]}
+
+                n_rows = len(rows)
+                n_cols = len(cols_to_use)
+                x_matrix = np.zeros((n_rows, n_cols))
+                for i, row in enumerate(rows):
+                    for j, col in enumerate(cols_to_use):
+                        try:
+                            x_matrix[i, j] = float(row.get(col, 0))
+                        except (ValueError, TypeError):
+                            x_matrix[i, j] = 0.0
+
+                # Old normalisation logic for this edge case
+                if meta and meta.is_normalized:
+                    x_normalized = x_matrix
+                elif meta and meta.normalization_mean and meta.normalization_std:
+                    training_mean = np.array(meta.normalization_mean)
+                    training_std = np.array(meta.normalization_std) + 1e-8
+                    x_normalized = (x_matrix - training_mean) / training_std
+                else:
+                    eval_mean = x_matrix.mean(axis=0)
+                    eval_std = x_matrix.std(axis=0) + 1e-8
+                    x_normalized = (x_matrix - eval_mean) / eval_std
+
+        # ------------------------------------------------------------------
+        # PATH 2 — Legacy: no metadata or no feature_columns
+        # ------------------------------------------------------------------
         else:
             # Fallback for legacy weights: auto-detect numeric columns
             skip_cols = {"label", "target", "class", "prediction"}
@@ -282,24 +344,16 @@ class CustomEvaluator:
             if not cols_to_use:
                 return {"valid": False, "errors": ["No numeric columns found in CSV"]}
 
-        n_rows = len(rows)
-        n_cols = len(cols_to_use)
-        x_matrix = np.zeros((n_rows, n_cols))
-        for i, row in enumerate(rows):
-            for j, col in enumerate(cols_to_use):
-                try:
-                    x_matrix[i, j] = float(row.get(col, 0))
-                except (ValueError, TypeError):
-                    x_matrix[i, j] = 0.0
+            n_rows = len(rows)
+            n_cols = len(cols_to_use)
+            x_matrix = np.zeros((n_rows, n_cols))
+            for i, row in enumerate(rows):
+                for j, col in enumerate(cols_to_use):
+                    try:
+                        x_matrix[i, j] = float(row.get(col, 0))
+                    except (ValueError, TypeError):
+                        x_matrix[i, j] = 0.0
 
-        # Apply training-derived normalisation when available
-        if meta and meta.is_normalized:
-            x_normalized = x_matrix
-        elif meta and meta.normalization_mean and meta.normalization_std:
-            training_mean = np.array(meta.normalization_mean)
-            training_std = np.array(meta.normalization_std) + 1e-8
-            x_normalized = (x_matrix - training_mean) / training_std
-        else:
             # Fallback: normalise using eval data's own statistics
             eval_mean = x_matrix.mean(axis=0)
             eval_std = x_matrix.std(axis=0) + 1e-8
@@ -332,15 +386,19 @@ class CustomEvaluator:
 
         return {"output_path": output_path, "valid": True}
 
-    def evaluate_tabular_single(self, values: list[float]) -> dict[str, Any]:
-        """Run inference on a single row of tabular data.
+    def evaluate_tabular_single(
+        self, features: dict[str, str], unknown_strategy: str = "error"
+    ) -> dict[str, Any]:
+        """Run inference on a single row of tabular data from raw string features.
 
-        Applies training-derived normalisation when preprocessing metadata
-        is available (loaded via ``load_weights``). Falls back to raw
-        values for legacy models.
+        Uses TransformReplayEngine to replay training-time encodings and
+        normalisation when preprocessing metadata is available (loaded via
+        ``load_weights``). Falls back to raw float conversion for legacy models.
 
         Args:
-            values: Feature values matching the model's ``in_features``.
+            features: Raw string feature values keyed by column name.
+            unknown_strategy: How to handle categories not seen during
+                training (``"error"`` to raise, ``"fallback"`` for safe default).
 
         Returns:
             Dict with ``predictions`` list and ``valid`` status.
@@ -348,14 +406,23 @@ class CustomEvaluator:
         model = self.build_model()
         model.eval()
 
-        # Apply training normalisation if metadata available
         meta = self._preprocessing_meta
-        if meta and meta.normalization_mean and meta.normalization_std:
-            training_mean = np.array(meta.normalization_mean)
-            training_std = np.array(meta.normalization_std) + 1e-8
-            values_arr = ((np.array(values) - training_mean) / training_std).tolist()
+
+        if meta and meta.feature_columns:
+            from preprocessing.encoders import TransformReplayEngine
+
+            engine = TransformReplayEngine(meta)
+            encoded = engine.transform_row(features, unknown_strategy)
+            # Build values in feature_columns order
+            values_arr = [encoded.get(col, 0.0) for col in meta.feature_columns]
         else:
-            values_arr = values
+            # Legacy fallback: try to convert dict values to floats
+            values_arr = []
+            for col, val in features.items():
+                try:
+                    values_arr.append(float(val))
+                except (ValueError, TypeError):
+                    values_arr.append(0.0)
 
         x_tensor = torch.tensor([values_arr], dtype=torch.float32)
 

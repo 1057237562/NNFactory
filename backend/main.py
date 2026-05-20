@@ -55,11 +55,13 @@ class EvalConfig(BaseModel):
     val_ratio: float = 0.2
     loss_function: str = "cross_entropy"
     device: str = "cpu"
+    unknown_strategy: str = "error"
 
 class SingleRowInput(BaseModel):
     blueprint: Blueprint
-    values: list[float]
+    features: dict[str, str]
     weights_filename: Optional[str] = None
+    unknown_strategy: str = "error"
 
 class TrainWithDatasetConfig(BaseModel):
     blueprint: Blueprint
@@ -301,7 +303,7 @@ async def evaluate_tabular_single(input_data: SingleRowInput):
             if not wresult.get("valid", True):
                 return wresult
 
-        result = evaluator.evaluate_tabular_single(input_data.values)
+        result = evaluator.evaluate_tabular_single(input_data.features, input_data.unknown_strategy)
         return result
     except ValueError as e:
         return {"valid": False, "errors": [str(e)]}
