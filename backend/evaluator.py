@@ -409,7 +409,7 @@ class CustomEvaluator:
         meta = self._preprocessing_meta
 
         if meta and meta.feature_columns:
-            from preprocessing.encoders import TransformReplayEngine
+            from .preprocessing.encoders import TransformReplayEngine
 
             engine = TransformReplayEngine(meta)
             encoded = engine.transform_row(features, unknown_strategy)
