@@ -28,6 +28,20 @@ class TransformReplayEngine:
     # Public API
     # ------------------------------------------------------------------
 
+    def _column_order(self) -> list[str]:
+        """Canonical column order matching the training-time feature matrix.
+
+        The training dataloader uses ``numeric_columns`` (falling back to
+        ``feature_columns``) to build the feature matrix.  The encoder maps
+        and normalisation statistics are likewise stored in that order, so
+        the replay engine must use the same ordering for correct predictions.
+        """
+        return (
+            self.meta.numeric_columns
+            if self.meta.numeric_columns
+            else self.meta.feature_columns
+        )
+
     def transform_row(
         self, row: dict[str, str], unknown_strategy: str = "error"
     ) -> dict[str, float]:
@@ -53,6 +67,7 @@ class TransformReplayEngine:
             Encoded values with keys matching ``feature_columns`` in order.
         """
         result: dict[str, Any] = {}
+        order = self._column_order()
 
         # --- 1. Label encoding ---
         self._apply_label_ordinal(
@@ -88,7 +103,7 @@ class TransformReplayEngine:
         self._apply_hash(result, row, self.meta.hash_encoders)
 
         # --- Pass-through: raw numeric columns not covered by any encoder ---
-        for col in self.meta.feature_columns:
+        for col in order:
             if col not in result and col in row:
                 try:
                     result[col] = float(row[col])
@@ -98,9 +113,9 @@ class TransformReplayEngine:
         # --- Normalization ---
         self._apply_normalization(result)
 
-        # --- Reorder to match feature_columns exactly ---
+        # --- Reorder to match the training-time column order exactly ---
         ordered: dict[str, float] = {}
-        for col in self.meta.feature_columns:
+        for col in order:
             ordered[col] = result.get(col, 0.0)
 
         return ordered
@@ -281,8 +296,9 @@ class TransformReplayEngine:
         if not self.meta.normalization_mean or not self.meta.normalization_std:
             return
 
+        order = self._column_order()
         for col, mean, std in zip(
-            self.meta.feature_columns,
+            order,
             self.meta.normalization_mean,
             self.meta.normalization_std,
         ):

@@ -287,12 +287,13 @@ class CustomEvaluator:
             if has_encoders or has_norm:
                 # TransformReplayEngine handles ALL encoding + normalisation
                 n_rows = len(rows)
-                n_cols = len(meta.feature_columns)
+                encoded_sample = engine.transform_row(rows[0], unknown_strategy)
+                n_cols = len(encoded_sample)
                 x_matrix = np.zeros((n_rows, n_cols))
                 for i, row_dict in enumerate(rows):
                     encoded = engine.transform_row(row_dict, unknown_strategy)
-                    for j, col in enumerate(meta.feature_columns):
-                        x_matrix[i, j] = encoded.get(col, 0.0)
+                    for j, val in enumerate(encoded.values()):
+                        x_matrix[i, j] = val
                 x_normalized = x_matrix
             else:
                 # feature_columns exist but no encoders or norm — use float()
@@ -413,8 +414,8 @@ class CustomEvaluator:
 
             engine = TransformReplayEngine(meta)
             encoded = engine.transform_row(features, unknown_strategy)
-            # Build values in feature_columns order
-            values_arr = [encoded.get(col, 0.0) for col in meta.feature_columns]
+            # The engine already returns values in training-time column order
+            values_arr = list(encoded.values())
         else:
             # Legacy fallback: try to convert dict values to floats
             values_arr = []
