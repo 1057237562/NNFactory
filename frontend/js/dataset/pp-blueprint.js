@@ -16,11 +16,13 @@ DatasetManagerUI.prototype.setupPreprocessBP = function () {
     const canvas = document.getElementById('ppCanvas');
     canvas.addEventListener('mousedown', (e) => this.onPpMouseDown(e));
     window.addEventListener('mousemove', (e) => this.onPpMouseMove(e));
-    window.addEventListener('mouseup', () => { this.draggingNode = null; });
-    // Event delegation: container is stable, child nodes get destroyed on re-render
-    document.getElementById('ppNodes').addEventListener('dblclick', (e) => {
-        const nodeEl = e.target.closest('.bp-node');
-        if (nodeEl && !e.target.closest('.bp-node-del')) this.openNodeConfig(nodeEl.dataset.id);
+    window.addEventListener('mouseup', () => {
+        if (this.draggingNode && !this._dragMoved) {
+            this.openNodeConfig(this.draggingNode.id);
+        }
+        this.draggingNode = null;
+        this._clickStartPos = null;
+        this._dragMoved = false;
     });
 };
 
@@ -166,6 +168,8 @@ DatasetManagerUI.prototype.onPpMouseDown = function (e) {
         this.dragOff = { x: e.clientX - rect.left, y: e.clientY - rect.top };
         this.selectedPpNode = nodeEl.dataset.id;
         this.draggingNode = this.ppNodes.find(n => n.id === nodeEl.dataset.id);
+        this._clickStartPos = { x: e.clientX, y: e.clientY };
+        this._dragMoved = false;
         this.renderPpNodes();
         e.preventDefault();
     } else {
@@ -176,6 +180,11 @@ DatasetManagerUI.prototype.onPpMouseDown = function (e) {
 
 DatasetManagerUI.prototype.onPpMouseMove = function (e) {
     if (!this.draggingNode) return;
+    if (this._clickStartPos) {
+        const dx = Math.abs(e.clientX - this._clickStartPos.x);
+        const dy = Math.abs(e.clientY - this._clickStartPos.y);
+        if (dx > 4 || dy > 4) this._dragMoved = true;
+    }
     const container = document.getElementById('ppNodes');
     const cr = container.getBoundingClientRect();
     this.draggingNode.x = Math.max(0, e.clientX - cr.left - this.dragOff.x);
