@@ -8,17 +8,15 @@ echo.
 echo [1/3] Setting up backend dependencies...
 cd backend
 call pip install -r requirements.txt
-cd ..
 echo.
 
 echo [2/3] Starting backend server...
-set PYTHONPATH=%~dp0
-start /b cmd /c "set PYTHONPATH=%~dp0 && uvicorn backend.main:app --reload --port 8000 --reload-exclude 'temp/*'"
+start /b cmd /c "uvicorn main:app --reload --port 8000"
 
 timeout /t 3 /nobreak >nul
 
 echo [3/3] Starting frontend server...
-start /b cmd /c "cd frontend && python -m http.server 4000"
+start /b cmd /c "cd /d %~dp0frontend && python -m http.server 4000"
 
 echo.
 echo ========================================
