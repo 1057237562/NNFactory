@@ -307,6 +307,12 @@
     letter-spacing: 0.5px;
 }
 
+.property-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
 .property-input {
     background: var(--bg-tertiary);
     border: 1px solid var(--border-color);

@@ -17,6 +17,11 @@ DatasetManagerUI.prototype.setupPreprocessBP = function () {
     canvas.addEventListener('mousedown', (e) => this.onPpMouseDown(e));
     window.addEventListener('mousemove', (e) => this.onPpMouseMove(e));
     window.addEventListener('mouseup', () => { this.draggingNode = null; });
+    // Event delegation: container is stable, child nodes get destroyed on re-render
+    document.getElementById('ppNodes').addEventListener('dblclick', (e) => {
+        const nodeEl = e.target.closest('.bp-node');
+        if (nodeEl && !e.target.closest('.bp-node-del')) this.openNodeConfig(nodeEl.dataset.id);
+    });
 };
 
 DatasetManagerUI.prototype.addPpNode = function (type) {
@@ -80,9 +85,6 @@ DatasetManagerUI.prototype.renderPpNodes = function () {
         </div>
     `).join('');
 
-    c.querySelectorAll('.bp-node').forEach(el => {
-        el.addEventListener('dblclick', (e) => { if (!e.target.closest('.bp-node-del')) this.openNodeConfig(el.dataset.id); });
-    });
     c.querySelectorAll('.bp-node-del').forEach(btn => {
         btn.addEventListener('click', (e) => { e.stopPropagation(); this.removePpNode(btn.dataset.id); });
     });
@@ -195,7 +197,9 @@ DatasetManagerUI.prototype.openNodeConfig = function (nodeId) {
     if (!node) return;
     const modal = document.getElementById('ppNodeModal');
     document.getElementById('ppNodeTitle').textContent = `Configure: ${node.label}`;
-    document.getElementById('ppNodeConfig').innerHTML = this.buildNodeForm(node);
+    const ds = this.datasets.find(d => d.id === this.selectedId);
+    const classNames = ds ? (ds.class_names || []) : [];
+    document.getElementById('ppNodeConfig').innerHTML = this.buildNodeForm(node, classNames);
     const saveBtn = document.getElementById('ppNodeConfig').querySelector('.save-node-cfg');
     if (saveBtn) saveBtn.addEventListener('click', () => { this.saveNodeCfg(node); modal.style.display = 'none'; });
     modal.style.display = 'flex';
@@ -203,13 +207,20 @@ DatasetManagerUI.prototype.openNodeConfig = function (nodeId) {
     modal.style.justifyContent = 'center';
 };
 
-DatasetManagerUI.prototype.buildNodeForm = function (node) {
+DatasetManagerUI.prototype.buildNodeForm = function (node, classNames) {
     const p = node.params;
     let h = '';
     switch (node.type) {
-        case 'filter_class':
-            h = `<div class="property-row"><label class="property-label">Mode</label><select class="property-select" id="pnMode"><option value="keep" ${p.mode==='keep'?'selected':''}>Keep</option><option value="remove" ${p.mode==='remove'?'selected':''}>Remove</option></select></div><div class="property-row"><label class="property-label">Classes (comma-sep)</label><input type="text" class="property-input" id="pnClasses" value="${p.classes}" placeholder="class1, class2"></div>`;
+        case 'filter_class': {
+            const selected = (p.classes || '').split(',').map(s => s.trim()).filter(Boolean);
+            const opts = (classNames && classNames.length > 0)
+                ? classNames.map(c =>
+                    `<option value="${c}" ${selected.includes(c) ? 'selected' : ''}>${c}</option>`
+                  ).join('')
+                : '<option value="" disabled>No class data available</option>';
+            h = `<div class="property-row"><label class="property-label">Mode</label><select class="property-select" id="pnMode"><option value="keep" ${p.mode==='keep'?'selected':''}>Keep</option><option value="remove" ${p.mode==='remove'?'selected':''}>Remove</option></select></div><div class="property-row"><label class="property-label">Classes</label><select class="property-select" id="pnClasses" multiple style="min-height:100px">${opts}</select><div class="property-hint">Ctrl+click to select multiple</div></div>`;
             break;
+        }
         case 'remove_samples':
             h = `<div class="property-row"><label class="property-label">Count</label><input type="number" class="property-input" id="pnCount" value="${p.count}" min="1"></div><div class="property-row"><label class="property-label">Strategy</label><select class="property-select" id="pnStrategy"><option value="random" ${p.strategy==='random'?'selected':''}>Random</option><option value="first" ${p.strategy==='first'?'selected':''}>First N</option><option value="last" ${p.strategy==='last'?'selected':''}>Last N</option></select></div>`;
             break;
@@ -256,7 +267,7 @@ DatasetManagerUI.prototype.buildNodeForm = function (node) {
 
 DatasetManagerUI.prototype.saveNodeCfg = function (node) {
     switch (node.type) {
-        case 'filter_class': node.params.mode = document.getElementById('pnMode').value; node.params.classes = document.getElementById('pnClasses').value; break;
+        case 'filter_class': node.params.mode = document.getElementById('pnMode').value; node.params.classes = Array.from(document.getElementById('pnClasses').selectedOptions).map(o => o.value).join(','); break;
         case 'remove_samples': node.params.count = parseInt(document.getElementById('pnCount').value) || 100; node.params.strategy = document.getElementById('pnStrategy').value; break;
         case 'split': node.params.train_ratio = parseFloat(document.getElementById('pnTrain').value) || 0.8; node.params.val_ratio = parseFloat(document.getElementById('pnVal').value) || 0.2; break;
         case 'balance': node.params.method = document.getElementById('pnBalMethod').value; break;
