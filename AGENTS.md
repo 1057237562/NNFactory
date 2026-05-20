@@ -80,7 +80,7 @@ NNFactory/
 ### Backend (Python/FastAPI)
 ```bash
 # Start dev server (auto-reload)
-cd backend && uvicorn main:app --reload --port 8000
+cd backend && uvicorn main:app --reload --reload-exclude 'temp/*' --port 8000
 
 # Install dependencies
 cd backend && pip install -r requirements.txt

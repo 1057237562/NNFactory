@@ -28,7 +28,7 @@ start.bat
 ```bash
 cd backend
 pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --reload-exclude 'temp/*' --port 8000
 ```
 
 **Frontend:**
