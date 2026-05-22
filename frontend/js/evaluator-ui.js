@@ -210,15 +210,17 @@ class EvaluatorUI {
             const data = await response.json();
             const weights = data.weights || [];
 
-            this.weightSelect.innerHTML = '<option value="">No weights</option>';
+            const prevValue = this.weightSelect.value;
+            this.weightSelect.innerHTML = '<option value="">No weights (random init)</option>';
             weights.forEach(w => {
                 const opt = document.createElement('option');
                 opt.value = w.filename;
                 opt.textContent = `${w.filename} (${w.size_human})`;
                 this.weightSelect.appendChild(opt);
             });
+            if (prevValue) this.weightSelect.value = prevValue;
         } catch (e) {
-            this.weightSelect.innerHTML = '<option value="">No weights</option>';
+            this.weightSelect.innerHTML = '<option value="">No weights (random init)</option>';
         }
     }
 
