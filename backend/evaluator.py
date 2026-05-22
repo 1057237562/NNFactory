@@ -28,6 +28,7 @@ class CustomEvaluator:
         self.blueprint = blueprint
         self.code_generator = CodeGenerator(blueprint)
         self._temp_path: str | None = None
+        self._model: Any | None = None
         self._preprocessing_meta: Optional[PreprocessingMetadata] = None
         os.makedirs(self.TEMP_DIR, exist_ok=True)
 
@@ -40,6 +41,7 @@ class CustomEvaluator:
         Returns:
             Instantiated model on the requested device.
         """
+        torch.manual_seed(0)
         if not self.blueprint.layers:
             raise ValueError("No layers in blueprint")
 
@@ -100,6 +102,7 @@ class CustomEvaluator:
             return {"valid": False, "errors": errors}
 
         model.load_state_dict(state_dict)
+        self._model = model
 
         # Load preprocessing metadata sidecar (may be None for legacy weights)
         self._preprocessing_meta = PreprocessingMetadata.load(weights_filename)
@@ -178,7 +181,7 @@ class CustomEvaluator:
         if not image_paths:
             return {"predictions": [], "valid": True}
 
-        model = self.build_model()
+        model = self._model if self._model is not None else self.build_model()
         model.eval()
 
         # Resolve image transform params: metadata > blueprint > ImageNet defaults
@@ -362,7 +365,7 @@ class CustomEvaluator:
 
         x_tensor = torch.tensor(x_normalized, dtype=torch.float32)
 
-        model = self.build_model()
+        model = self._model if self._model is not None else self.build_model()
         model.eval()
 
         with torch.inference_mode():
@@ -404,7 +407,7 @@ class CustomEvaluator:
         Returns:
             Dict with ``predictions`` list and ``valid`` status.
         """
-        model = self.build_model()
+        model = self._model if self._model is not None else self.build_model()
         model.eval()
 
         meta = self._preprocessing_meta
