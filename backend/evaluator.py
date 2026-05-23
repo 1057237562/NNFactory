@@ -300,14 +300,9 @@ class CustomEvaluator:
                 x_normalized = x_matrix
             else:
                 # feature_columns exist but no encoders or norm — use float()
-                cols_to_use = [c for c in meta.feature_columns if c in fieldnames]
-                if not cols_to_use:
-                    return {"valid": False, "errors": [
-                        f"None of the training feature columns "
-                        f"{meta.feature_columns} found in evaluation CSV "
-                        f"columns {fieldnames}"
-                    ]}
-
+                # Include ALL training feature columns — missing CSV columns
+                # default to 0.0 — to keep the input dimension aligned.
+                cols_to_use = list(meta.feature_columns)
                 n_rows = len(rows)
                 n_cols = len(cols_to_use)
                 x_matrix = np.zeros((n_rows, n_cols))
@@ -334,19 +329,18 @@ class CustomEvaluator:
         # PATH 2 — Legacy: no metadata or no feature_columns
         # ------------------------------------------------------------------
         else:
-            # Fallback for legacy weights: auto-detect numeric columns
+            # Fallback for legacy weights: include all non-label columns
             skip_cols = {"label", "target", "class", "prediction"}
             cols_to_use: list[str] = []
             for col in fieldnames:
                 if col.lower() in skip_cols:
                     continue
-                try:
-                    float(rows[0].get(col, ""))
-                    cols_to_use.append(col)
-                except (ValueError, TypeError):
-                    pass
+                # Include the column regardless of its first-row value.
+                # Missing / non-numeric cells are defaulted to 0.0 below,
+                # so this is safe and prevents dimension mismatches.
+                cols_to_use.append(col)
             if not cols_to_use:
-                return {"valid": False, "errors": ["No numeric columns found in CSV"]}
+                return {"valid": False, "errors": ["No columns found in CSV for prediction"]}
 
             n_rows = len(rows)
             n_cols = len(cols_to_use)
@@ -368,12 +362,20 @@ class CustomEvaluator:
         model = self._model if self._model is not None else self.build_model()
         model.eval()
 
-        with torch.inference_mode():
-            output = model(x_tensor)
-            if output.dim() > 1:
-                pred_indices = output.argmax(dim=1).cpu().numpy()
-            else:
-                pred_indices = (output > 0).long().cpu().numpy()
+        try:
+            with torch.inference_mode():
+                output = model(x_tensor)
+                if output.dim() > 1:
+                    pred_indices = output.argmax(dim=1).cpu().numpy()
+                else:
+                    pred_indices = (output > 0).long().cpu().numpy()
+        except RuntimeError as e:
+            return {
+                "valid": False,
+                "errors": [
+                    f"Model inference failed: {e}"
+                ]
+            }
 
         output_dir = os.path.dirname(os.path.abspath(csv_path))
         output_filename = f"eval_{os.path.basename(csv_path)}"
