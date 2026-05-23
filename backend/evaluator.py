@@ -149,9 +149,9 @@ class CustomEvaluator:
                 input_shape = [3, 224, 224]
             return {"type": "image", "input_shape": input_shape, "num_classes": num_classes}
 
-        non_input_layers = [l for l in layers if l.type.lower() != "input"]
-        if non_input_layers and non_input_layers[0].type.lower() == "linear":
-            in_features = non_input_layers[0].params.get("in_features", 10)
+        if linear_layers:
+            first_linear = linear_layers[0]
+            in_features = first_linear.params.get("in_features", 10)
             return {
                 "type": "tabular",
                 "input_shape": {"in_features": in_features},
