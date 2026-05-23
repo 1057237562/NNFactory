@@ -297,9 +297,6 @@ async def evaluate_tabular_csv(
         return Response(
             content=csv_content,
             media_type="text/csv",
-            headers={
-                "Content-Disposition": f'attachment; filename="eval_{file.filename}"'
-            },
         )
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
