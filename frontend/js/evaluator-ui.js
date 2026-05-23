@@ -390,6 +390,15 @@ class EvaluatorUI {
                 throw new Error(errData.detail || `HTTP ${response.status}`);
             }
 
+            // Backend returns JSON errors with valid=false even on 200
+            const ct = response.headers.get('content-type') || '';
+            if (ct.includes('json')) {
+                const data = await response.json();
+                if (!data.valid) {
+                    throw new Error((data.errors || ['Unknown error']).join(', '));
+                }
+            }
+
             this.csvResultBlob = await response.blob();
             this.csvDownloadBtn.style.display = '';
             this.csvResults.style.display = 'block';
