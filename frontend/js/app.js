@@ -161,6 +161,7 @@ class App {
         this.setupEventListeners();
         this.setupCategoryToggles();
         this.training.setupTrainingStatusBar();
+        this.initStyleSwitch();
         this.renderConnections();
     }
     
@@ -236,6 +237,50 @@ class App {
                 content.classList.toggle('collapsed');
             });
         });
+    }
+
+    initStyleSwitch() {
+        const saved = localStorage.getItem('nnfactory_theme');
+        if (saved === 'flat') {
+            this.enableFlatDesign();
+        }
+        document.getElementById('styleSwitchBtn').addEventListener('click', () => {
+            const isFlat = document.documentElement.classList.toggle('theme-flat');
+            localStorage.setItem('nnfactory_theme', isFlat ? 'flat' : 'default');
+            this.updateStyleSwitchButton(isFlat);
+        });
+    }
+
+    enableFlatDesign() {
+        document.documentElement.classList.add('theme-flat');
+        this.updateStyleSwitchButton(true);
+    }
+
+    updateStyleSwitchButton(isFlat) {
+        const btn = document.getElementById('styleSwitchBtn');
+        const label = document.getElementById('styleSwitchLabel');
+        if (!btn || !label) return;
+        if (isFlat) {
+            label.textContent = 'Classic';
+            btn.title = 'Switch to Classic Dark theme';
+            btn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <circle cx="8" cy="8" r="3" fill="currentColor"/>
+                    <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                </svg>
+                <span class="style-switch-label" id="styleSwitchLabel">Classic</span>
+            `;
+        } else {
+            label.textContent = 'Flat';
+            btn.title = 'Switch to Flat Design';
+            btn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <circle cx="8" cy="8" r="3" fill="currentColor"/>
+                    <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                </svg>
+                <span class="style-switch-label" id="styleSwitchLabel">Flat</span>
+            `;
+        }
     }
     
     renderConnections() {

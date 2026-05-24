@@ -1,0 +1,1672 @@
+/* ============================================================
+   Flat Design Theme — NNFactory
+   ============================================================
+   Activate by adding class "theme-flat" to <html> element.
+   Overrides the default dark theme with a bold, flat, light design.
+   ============================================================ */
+
+/* ── Import Outfit font ── */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
+
+/* ============================================================
+   1. DESIGN TOKENS (CSS Custom Properties)
+   ============================================================ */
+html.theme-flat {
+  /* Backgrounds */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f3f4f6;
+  --bg-tertiary: #f9fafb;
+  --bg-card: #ffffff;
+  --bg-hover: #e5e7eb;
+  --bg-active: #d1d5db;
+
+  /* Text */
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
+
+  /* Accents */
+  --accent-primary: #3b82f6;
+  --accent-secondary: #10b981;
+  --accent-tertiary: #f59e0b;
+  --accent-success: #10b981;
+  --accent-warning: #f59e0b;
+  --accent-danger: #ef4444;
+  --accent-info: #3b82f6;
+
+  /* Borders */
+  --border-color: #e5e7eb;
+  --border-light: #d1d5db;
+
+  /* Shadows — flat design: none */
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 8px;
+
+  /* Layout */
+  --sidebar-width: 260px;
+  --properties-width: 300px;
+  --header-height: 56px;
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+}
+
+
+/* ============================================================
+   2. BASE / BODY
+   ============================================================ */
+html.theme-flat body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+
+/* ============================================================
+   3. HEADER
+   ============================================================ */
+html.theme-flat .header {
+  background: #ffffff;
+  border-bottom: 2px solid var(--border-color);
+}
+
+html.theme-flat .logo {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+html.theme-flat .backend-status {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+
+html.theme-flat .backend-dot.online {
+  background: var(--accent-success);
+  box-shadow: none;
+}
+
+html.theme-flat .backend-dot.offline {
+  background: var(--accent-danger);
+  box-shadow: none;
+}
+
+html.theme-flat .backend-dot.checking {
+  background: var(--accent-warning);
+  box-shadow: none;
+}
+
+html.theme-flat .model-name-input {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 500;
+}
+
+html.theme-flat .model-name-input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+
+/* ============================================================
+   4. BUTTONS
+   ============================================================ */
+
+/* Base button */
+html.theme-flat .btn {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  letter-spacing: normal;
+}
+
+html.theme-flat .btn svg {
+  pointer-events: none;
+}
+
+/* Primary button */
+html.theme-flat .btn-primary {
+  background: var(--accent-primary);
+  color: #ffffff;
+  padding: 10px 18px;
+  min-height: 42px;
+}
+
+html.theme-flat .btn-primary:hover {
+  background: #2563eb;
+  transform: scale(1.04);
+  box-shadow: none;
+}
+
+html.theme-flat .btn-primary:active {
+  transform: scale(0.98);
+}
+
+/* Secondary button */
+html.theme-flat .btn-secondary {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: none;
+  padding: 10px 18px;
+  min-height: 42px;
+}
+
+html.theme-flat .btn-secondary:hover {
+  background: var(--bg-hover);
+  transform: scale(1.04);
+}
+
+/* Danger button */
+html.theme-flat .btn-danger {
+  background: #fef2f2;
+  color: var(--accent-danger);
+  border: 2px solid #fecaca;
+  padding: 10px 18px;
+  min-height: 42px;
+}
+
+html.theme-flat .btn-danger:hover {
+  background: var(--accent-danger);
+  color: #ffffff;
+  border-color: var(--accent-danger);
+  transform: scale(1.04);
+}
+
+/* Small buttons */
+html.theme-flat .btn-sm {
+  padding: 8px 14px;
+  font-size: 13px;
+  min-height: 36px;
+  border-radius: var(--radius-sm);
+}
+
+html.theme-flat .btn-sm.btn-primary {
+  background: var(--accent-primary);
+  color: #ffffff;
+}
+
+html.theme-flat .btn-sm.btn-primary:hover {
+  background: #2563eb;
+}
+
+html.theme-flat .btn-sm.btn-danger {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 2px solid var(--border-color);
+}
+
+html.theme-flat .btn-sm.btn-danger:hover {
+  background: var(--accent-danger);
+  color: #ffffff;
+  border-color: var(--accent-danger);
+}
+
+/* Disabled button */
+html.theme-flat .btn:disabled,
+html.theme-flat .btn.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+
+/* ============================================================
+   5. TOGGLE SWITCH
+   ============================================================ */
+html.theme-flat .toggle-switch {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+html.theme-flat .slider {
+  width: 38px;
+  height: 22px;
+  background: var(--bg-hover);
+  border-radius: 4px;
+  position: relative;
+  transition: background 0.2s ease;
+}
+
+html.theme-flat .slider::before {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: #ffffff;
+  border-radius: 2px;
+  top: 3px;
+  left: 3px;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+html.theme-flat .toggle-switch input:checked + .slider {
+  background: var(--accent-primary);
+}
+
+html.theme-flat .toggle-switch input:checked + .slider::before {
+  transform: translateX(16px);
+  background: #ffffff;
+}
+
+
+/* ============================================================
+   6. DEVICE SELECT
+   ============================================================ */
+html.theme-flat .device-select {
+  padding: 8px 32px 8px 12px;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='%234b5563'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  min-height: 36px;
+}
+
+html.theme-flat .device-select:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+html.theme-flat .device-select option {
+  background: #ffffff;
+  color: var(--text-primary);
+}
+
+
+/* ============================================================
+   7. SIDEBAR
+   ============================================================ */
+html.theme-flat .sidebar {
+  background: #ffffff;
+  border-right: 2px solid var(--border-color);
+}
+
+html.theme-flat .sidebar::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+html.theme-flat .section-title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+/* Layer category */
+html.theme-flat .layer-category {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 2px solid var(--border-color);
+}
+
+html.theme-flat .category-header {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 12px 14px;
+  color: var(--text-primary);
+}
+
+html.theme-flat .category-header:hover {
+  background: var(--bg-hover);
+}
+
+html.theme-flat .category-icon {
+  color: var(--accent-primary);
+}
+
+html.theme-flat .category-arrow {
+  color: var(--text-muted);
+}
+
+/* Layer item */
+html.theme-flat .layer-item {
+  background: #ffffff;
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
+  padding: 10px 12px;
+  transition: all 0.2s ease;
+}
+
+html.theme-flat .layer-item:hover {
+  background: #ffffff;
+  border-color: var(--accent-primary);
+  transform: translateX(4px);
+}
+
+html.theme-flat .layer-name {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+/* Quick-add buttons */
+html.theme-flat .quick-add-btn {
+  background: var(--bg-secondary);
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  padding: 12px 14px;
+  transition: all 0.2s ease;
+}
+
+html.theme-flat .quick-add-btn:hover {
+  background: #ffffff;
+  border-color: var(--accent-primary);
+  border-style: solid;
+  color: var(--accent-primary);
+  transform: scale(1.02);
+}
+
+
+/* ============================================================
+   8. PROPERTIES PANEL
+   ============================================================ */
+html.theme-flat .properties-panel {
+  background: var(--bg-secondary);
+  border-left: 2px solid var(--border-color);
+}
+
+html.theme-flat .panel-header {
+  border-bottom: 2px solid var(--border-color);
+  padding: 16px;
+}
+
+html.theme-flat .panel-header h3 {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: -0.01em;
+}
+
+html.theme-flat .panel-close {
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+}
+
+html.theme-flat .panel-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+html.theme-flat .panel-content::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+html.theme-flat .empty-state {
+  color: var(--text-muted);
+}
+
+html.theme-flat .empty-state svg {
+  opacity: 0.3;
+  color: var(--text-muted);
+}
+
+html.theme-flat .empty-state p {
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+}
+
+html.theme-flat .property-group-title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 2px solid var(--border-color);
+}
+
+html.theme-flat .property-label {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+html.theme-flat .property-input {
+  background: #ffffff;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  color: var(--text-primary);
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  transition: border-color 0.2s ease;
+}
+
+html.theme-flat .property-input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+html.theme-flat .property-select {
+  background: #ffffff;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  color: var(--text-primary);
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='%234b5563'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 30px;
+  transition: border-color 0.2s ease;
+}
+
+html.theme-flat .property-select:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+html.theme-flat .property-select option {
+  background: #ffffff;
+  color: var(--text-primary);
+}
+
+html.theme-flat .property-checkbox span {
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+html.theme-flat .property-checkbox input {
+  accent-color: var(--accent-primary);
+}
+
+html.theme-flat .delete-node-btn {
+  background: #fef2f2;
+  border: 2px solid #fecaca;
+  border-radius: var(--radius-sm);
+  color: var(--accent-danger);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+html.theme-flat .delete-node-btn:hover {
+  background: var(--accent-danger);
+  color: #ffffff;
+  border-color: var(--accent-danger);
+  transform: scale(1.02);
+}
+
+
+/* ============================================================
+   9. CANVAS
+   ============================================================ */
+
+/* Container — dot grid changes to light */
+html.theme-flat .canvas-container {
+  background: #f8f9fa;
+  background-image:
+    radial-gradient(circle at 1px 1px, #d1d5db 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+/* Canvas controls panel */
+html.theme-flat .canvas-controls {
+  background: #ffffff;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: none;
+  padding: 8px;
+  gap: 6px;
+}
+
+html.theme-flat .canvas-control-btn {
+  width: 34px;
+  height: 34px;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+}
+
+html.theme-flat .canvas-control-btn:hover {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #ffffff;
+  transform: scale(1.08);
+}
+
+html.theme-flat .zoom-level {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--text-secondary);
+  min-width: 44px;
+}
+
+/* Canvas info */
+html.theme-flat .canvas-info {
+  background: #ffffff;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: none;
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 10px 16px;
+}
+
+
+/* ============================================================
+   10. NODES
+   ============================================================ */
+html.theme-flat .node {
+  background: #ffffff;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  min-width: 150px;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+  cursor: move;
+  user-select: none;
+  z-index: 10;
+  box-shadow: none;
+}
+
+html.theme-flat .node:hover {
+  border-color: var(--accent-primary);
+  transform: scale(1.02);
+  box-shadow: none;
+}
+
+html.theme-flat .node.selected {
+  border-color: var(--accent-primary);
+  border-width: 3px;
+  box-shadow: none;
+}
+
+html.theme-flat .node-header {
+  padding: 12px 14px;
+  border-radius: 6px 6px 0 0;
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+  text-transform: uppercase;
+}
+
+/* Solid flat colors for each category — no gradients */
+html.theme-flat .node-header.conv {
+  background: #3b82f6;
+}
+
+html.theme-flat .node-header.pool {
+  background: #06b6d4;
+}
+
+html.theme-flat .node-header.linear {
+  background: #10b981;
+}
+
+html.theme-flat .node-header.norm {
+  background: #f59e0b;
+}
+
+html.theme-flat .node-header.activation {
+  background: #ec4899;
+}
+
+html.theme-flat .node-header.transformer {
+  background: #a855f7;
+}
+
+html.theme-flat .node-header.rnn {
+  background: #14b8a6;
+}
+
+html.theme-flat .node-header.regularization {
+  background: #ef4444;
+}
+
+html.theme-flat .node-header.utility {
+  background: #6b7280;
+}
+
+html.theme-flat .node-body {
+  padding: 10px 14px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: #ffffff;
+  border-radius: 0 0 6px 6px;
+  border-top: 2px solid var(--bg-secondary);
+}
+
+/* Ports */
+html.theme-flat .port {
+  width: 14px;
+  height: 14px;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: 50%;
+  cursor: crosshair;
+  transition: all 0.2s ease;
+}
+
+html.theme-flat .port:hover {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  transform: scale(1.4);
+}
+
+html.theme-flat .port.connected {
+  background: var(--accent-success);
+  border-color: var(--accent-success);
+}
+
+/* Connection paths */
+html.theme-flat .connection-path {
+  fill: none;
+  stroke: var(--accent-primary);
+  stroke-width: 2.5;
+  opacity: 0.8;
+  transition: stroke-width 0.2s ease, opacity 0.2s ease;
+}
+
+html.theme-flat .connection-path:hover {
+  stroke-width: 4;
+  opacity: 1;
+}
+
+html.theme-flat .connection-path.selected {
+  stroke: var(--accent-danger);
+  stroke-width: 3.5;
+}
+
+/* Drop indicator */
+html.theme-flat .drop-indicator {
+  border: 2px dashed var(--accent-primary);
+  border-radius: var(--radius-md);
+  opacity: 0.6;
+}
+
+/* Highlight zone */
+html.theme-flat .highlight-zone {
+  background: rgba(59, 130, 246, 0.08);
+  border: 2px dashed var(--accent-primary);
+}
+
+
+/* ============================================================
+   11. MODALS
+   ============================================================ */
+html.theme-flat .modal-overlay {
+  background: rgba(107, 114, 128, 0.6);
+  backdrop-filter: none;
+}
+
+html.theme-flat .modal-content {
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  box-shadow: none;
+  border: 2px solid var(--border-color);
+}
+
+html.theme-flat .modal-header {
+  padding: 20px 24px;
+  border-bottom: 2px solid var(--border-color);
+}
+
+html.theme-flat .modal-header h3 {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+}
+
+html.theme-flat .modal-close {
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+}
+
+html.theme-flat .modal-close:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+html.theme-flat .modal-body {
+  padding: 24px;
+}
+
+html.theme-flat .modal-body::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+html.theme-flat .modal-body pre {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+
+/* ============================================================
+   12. TOASTS
+   ============================================================ */
+html.theme-flat .toast-container {
+  position: fixed;
+  top: 70px;
+  right: 20px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+html.theme-flat .toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  background: #ffffff;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  animation: flatToastIn 0.25s ease;
+  max-width: 380px;
+}
+
+html.theme-flat .toast.success {
+  border-left: 4px solid var(--accent-success);
+}
+
+html.theme-flat .toast.error {
+  border-left: 4px solid var(--accent-danger);
+}
+
+html.theme-flat .toast.info {
+  border-left: 4px solid var(--accent-info);
+}
+
+html.theme-flat .toast.warning {
+  border-left: 4px solid var(--accent-warning);
+}
+
+@keyframes flatToastIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+
+/* ============================================================
+   13. TRAINING UI
+   ============================================================ */
+
+/* Config grid */
+html.theme-flat .train-config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+/* Metric cards */
+html.theme-flat .metric-card {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+}
+
+html.theme-flat .metric-label {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+html.theme-flat .metric-value {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--text-primary);
+}
+
+/* Progress bar */
+html.theme-flat .progress-bar-container {
+  height: 10px;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: 0;
+  overflow: hidden;
+}
+
+html.theme-flat .progress-bar {
+  height: 100%;
+  background: var(--accent-primary);
+  border-radius: 0;
+  transition: width 0.3s ease;
+}
+
+/* Chart area */
+html.theme-flat .train-chart {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+/* Log */
+html.theme-flat .train-log {
+  max-height: 200px;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+html.theme-flat .train-log-entry {
+  padding: 3px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+html.theme-flat .train-log-entry:last-child {
+  border-bottom: none;
+}
+
+/* Training status bar */
+html.theme-flat .train-status-bar {
+  height: 44px;
+  padding: 0 20px;
+  background: #ffffff;
+  border-bottom: 2px solid var(--border-color);
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+}
+
+html.theme-flat .train-status-bar:hover {
+  background: var(--bg-secondary);
+}
+
+html.theme-flat .train-status-icon {
+  color: var(--accent-primary);
+}
+
+html.theme-flat .train-status-label {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+html.theme-flat .train-status-epoch {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+html.theme-flat .train-status-track {
+  height: 8px;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: 0;
+  overflow: hidden;
+}
+
+html.theme-flat .train-status-progress {
+  height: 100%;
+  background: var(--accent-primary);
+  border-radius: 0;
+  transition: width 0.3s ease;
+}
+
+html.theme-flat .train-status-btn {
+  border-radius: 4px;
+  color: var(--text-muted);
+}
+
+html.theme-flat .train-status-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+html.theme-flat .train-status-stop:hover {
+  background: #fef2f2;
+  color: var(--accent-danger);
+}
+
+html.theme-flat .train-status-bar.complete .train-status-icon {
+  color: var(--accent-success);
+}
+
+html.theme-flat .train-status-bar.error .train-status-icon {
+  color: var(--accent-danger);
+}
+
+/* Results */
+html.theme-flat .results-title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+html.theme-flat .result-item {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+}
+
+html.theme-flat .result-label {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+html.theme-flat .result-value {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+
+/* ============================================================
+   14. EVALUATOR UI
+   ============================================================ */
+
+html.theme-flat .eval-metric-big {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 24px;
+}
+
+html.theme-flat .eval-metric-value {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 36px;
+  color: var(--accent-primary);
+}
+
+html.theme-flat .eval-metric-label {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Class bar charts */
+html.theme-flat .class-bar-track {
+  height: 22px;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: 0;
+  overflow: hidden;
+}
+
+html.theme-flat .class-bar-fill {
+  height: 100%;
+  background: var(--accent-primary);
+  border-radius: 0;
+  transition: width 0.5s ease;
+}
+
+html.theme-flat .class-bar-value {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+/* Eval tabs */
+html.theme-flat .eval-tabs {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+}
+
+html.theme-flat .eval-tab {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 10px 16px;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+}
+
+html.theme-flat .eval-tab.active {
+  background: var(--accent-primary);
+  color: #ffffff;
+}
+
+html.theme-flat .eval-tab:hover:not(.active) {
+  background: var(--bg-hover);
+}
+
+/* Drop zone */
+html.theme-flat .eval-drop-zone {
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  transition: all 0.2s ease;
+}
+
+html.theme-flat .eval-drop-zone:hover,
+html.theme-flat .eval-drop-zone.dragover {
+  border-color: var(--accent-primary);
+  border-style: solid;
+  background: rgba(59, 130, 246, 0.05);
+}
+
+/* Results card */
+html.theme-flat .eval-results {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+}
+
+html.theme-flat .eval-result-header {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+html.theme-flat .eval-prediction-card {
+  background: #ffffff;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+}
+
+html.theme-flat .eval-prediction-bar {
+  height: 16px;
+  background: var(--bg-secondary);
+  border-radius: 0;
+  overflow: hidden;
+}
+
+html.theme-flat .eval-prediction-fill {
+  height: 100%;
+  background: var(--accent-primary);
+  border-radius: 0;
+  transition: width 0.5s ease;
+}
+
+html.theme-flat .eval-prediction-value {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--text-primary);
+}
+
+html.theme-flat .eval-prediction-class {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+/* Top-k slider */
+html.theme-flat .eval-topk-slider {
+  height: 8px;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: 0;
+  outline: none;
+  cursor: pointer;
+}
+
+html.theme-flat .eval-topk-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  background: var(--accent-primary);
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+html.theme-flat .eval-topk-value {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  color: var(--accent-primary);
+}
+
+/* Type badges */
+html.theme-flat .eval-type-badge {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+}
+
+html.theme-flat .eval-type-badge.image-model {
+  background: #ecfdf5;
+  color: #059669;
+  border: 2px solid #a7f3d0;
+}
+
+html.theme-flat .eval-type-badge.tabular-model {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 2px solid #bfdbfe;
+}
+
+html.theme-flat .eval-type-badge.unknown-model {
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  border: 2px solid var(--border-color);
+}
+
+/* Image thumbnails */
+html.theme-flat .eval-image-thumb {
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+}
+
+html.theme-flat .eval-image-thumb-name {
+  font-family: 'Outfit', sans-serif;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* Single row form */
+html.theme-flat .eval-single-form .property-input {
+  background: #ffffff;
+  border: 2px solid var(--border-color);
+}
+
+/* CSV preview table */
+html.theme-flat .eval-csv-preview th {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-bottom: 2px solid var(--border-color);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+}
+
+html.theme-flat .eval-csv-preview td {
+  border-bottom: 2px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+/* Eval loading overlay */
+html.theme-flat .eval-loading {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+html.theme-flat .eval-loading-spinner {
+  border: 3px solid var(--bg-hover);
+  border-top-color: var(--accent-primary);
+}
+
+html.theme-flat .eval-loading-text {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+
+/* ============================================================
+   15. WEIGHTS UI
+   ============================================================ */
+
+html.theme-flat .weight-item {
+  background: #ffffff;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 14px 18px;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+html.theme-flat .weight-item:hover {
+  border-color: var(--accent-primary);
+  transform: scale(1.01);
+}
+
+html.theme-flat .weight-name {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+html.theme-flat .weight-meta {
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+html.theme-flat .weight-refresh-btn {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+}
+
+html.theme-flat .weight-refresh-btn:hover {
+  background: var(--bg-hover);
+  color: var(--accent-primary);
+  transform: scale(1.06);
+}
+
+html.theme-flat .weights-empty {
+  color: var(--text-muted);
+  font-family: 'Outfit', sans-serif;
+}
+
+html.theme-flat .weights-empty svg {
+  opacity: 0.25;
+}
+
+html.theme-flat .weights-empty-hint {
+  font-size: 13px;
+}
+
+
+/* ============================================================
+   16. DATASET MANAGER
+   ============================================================ */
+html.theme-flat .ds-header {
+  background: var(--bg-secondary);
+  border-bottom: 2px solid var(--border-color);
+}
+
+html.theme-flat .ds-search {
+  background: #ffffff;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-family: 'Outfit', sans-serif;
+}
+
+html.theme-flat .ds-search:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+html.theme-flat .ds-table {
+  border: 2px solid var(--border-color);
+}
+
+html.theme-flat .ds-table th {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-bottom: 2px solid var(--border-color);
+}
+
+html.theme-flat .ds-table td {
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+  font-family: 'Outfit', sans-serif;
+}
+
+html.theme-flat .ds-table tr:hover td {
+  background: var(--bg-secondary);
+}
+
+/* Pagination */
+html.theme-flat .ds-pagination {
+  border-top: 2px solid var(--border-color);
+}
+
+html.theme-flat .ds-page-btn {
+  background: #ffffff;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+html.theme-flat .ds-page-btn:hover {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #ffffff;
+  transform: scale(1.05);
+}
+
+html.theme-flat .ds-page-btn.active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #ffffff;
+}
+
+html.theme-flat .ds-page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Dataset cards / grid */
+html.theme-flat .ds-card {
+  background: #ffffff;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+html.theme-flat .ds-card:hover {
+  border-color: var(--accent-primary);
+  transform: scale(1.02);
+}
+
+html.theme-flat .ds-card-title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+html.theme-flat .ds-card-meta {
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Dataset toolbar buttons */
+html.theme-flat .ds-toolbar .btn {
+  min-height: 38px;
+}
+
+/* Image grid */
+html.theme-flat .ds-image-item {
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: #ffffff;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+html.theme-flat .ds-image-item:hover {
+  border-color: var(--accent-primary);
+  transform: scale(1.02);
+}
+
+html.theme-flat .ds-image-label {
+  font-family: 'Outfit', sans-serif;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+
+/* ============================================================
+   17. DATASET VIZ
+   ============================================================ */
+
+html.theme-flat .viz-card {
+  background: #ffffff;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+html.theme-flat .viz-card-title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+html.theme-flat .viz-stat-value {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 28px;
+  color: var(--accent-primary);
+}
+
+html.theme-flat .viz-stat-label {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Bar charts */
+html.theme-flat .viz-bar-track {
+  height: 20px;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: 0;
+  overflow: hidden;
+}
+
+html.theme-flat .viz-bar-fill {
+  height: 100%;
+  background: var(--accent-primary);
+  border-radius: 0;
+  transition: width 0.5s ease;
+}
+
+html.theme-flat .viz-bar-label {
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+html.theme-flat .viz-bar-value {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+/* Tags */
+html.theme-flat .viz-tag {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 500;
+  font-size: 11px;
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+}
+
+html.theme-flat .viz-tag:hover {
+  border-color: var(--accent-primary);
+  transform: scale(1.04);
+}
+
+
+/* ============================================================
+   18. DATASET VIZ CHARTS
+   ============================================================ */
+
+html.theme-flat .chart-container {
+  background: #ffffff;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+html.theme-flat .chart-legend-item {
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+html.theme-flat .chart-dist-bar {
+  background: var(--accent-primary);
+  border-radius: 0;
+  transition: height 0.5s ease;
+}
+
+
+/* ============================================================
+   19. PREPROCESSING
+   ============================================================ */
+
+html.theme-flat .pp-pipeline {
+  background: #ffffff;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+html.theme-flat .pp-step {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+html.theme-flat .pp-step:hover {
+  border-color: var(--accent-primary);
+  transform: scale(1.02);
+}
+
+html.theme-flat .pp-step-name {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+html.theme-flat .pp-step-desc {
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+html.theme-flat .pp-connector {
+  stroke: var(--border-color);
+  stroke-width: 2.5;
+}
+
+
+/* ============================================================
+   20. SCROLLBARS
+   ============================================================ */
+
+html.theme-flat ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+html.theme-flat ::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+html.theme-flat ::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+html.theme-flat ::-webkit-scrollbar-thumb:hover {
+  background: var(--border-light);
+}
+
+
+/* ============================================================
+   21. STYLE SWITCH TOGGLE BUTTON (in-header)
+   ============================================================ */
+html.theme-flat .style-switch-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 36px;
+  white-space: nowrap;
+}
+
+html.theme-flat .style-switch-btn:hover {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #ffffff;
+  transform: scale(1.05);
+}
+
+/* When in flat theme, show "Dark" label — toggle goes back to dark */
+html.theme-flat .style-switch-btn .style-switch-label {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+
+/* ============================================================
+   22. TOOLTIP OVERRIDES
+   ============================================================ */
+html.theme-flat [title]:hover::after {
+  font-family: 'Outfit', sans-serif;
+}

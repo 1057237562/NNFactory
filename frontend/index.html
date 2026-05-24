@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="css/dataset-viz-charts.css">
     <link rel="stylesheet" href="css/preprocessing.css">
     <link rel="stylesheet" href="css/weights.css">
+    <link rel="stylesheet" href="css/flat-design.css">
 </head>
 <body>
     <div id="app">
@@ -109,6 +110,13 @@
                         <path d="M8 1a.5.5 0 01.5.5v7.793l2.146-2.147a.5.5 0 01.708.708l-3 3a.5.5 0 01-.708 0l-3-3a.5.5 0 11.708-.708L7.5 9.293V1.5A.5.5 0 018 1zM2 13.5a.5.5 0 01.5-.5h11a.5.5 0 010 1h-11a.5.5 0 01-.5-.5z"/>
                     </svg>
                     Export
+                </button>
+                <button id="styleSwitchBtn" class="btn btn-secondary style-switch-btn" title="Switch to Flat Design">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <circle cx="8" cy="8" r="3" fill="currentColor"/>
+                        <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                    </svg>
+                    <span class="style-switch-label" id="styleSwitchLabel">Flat</span>
                 </button>
                 <button id="importBtn" class="btn btn-secondary" title="Import Blueprint">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
