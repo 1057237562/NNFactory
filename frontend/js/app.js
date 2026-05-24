@@ -89,7 +89,7 @@ class App {
     }
 
     enableBackendButtons(enabled) {
-        const btnIds = ['trainBtn', 'evaluateBtn', 'datasetBtn', 'weightsBtn'];
+        const btnIds = ['trainBtn', 'evaluateBtn', 'datasetBtn'];
         btnIds.forEach(id => {
             const btn = document.getElementById(id);
             if (btn) {
