@@ -1661,10 +1661,31 @@ html.theme-flat .style-switch-btn:hover {
   transform: scale(1.05);
 }
 
-/* When in flat theme, show "Dark" label — toggle goes back to dark */
-html.theme-flat .style-switch-btn .style-switch-label {
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+html.theme-flat .header-dropdown .dropdown-menu {
+  background: #ffffff;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+}
+
+html.theme-flat .dropdown-item {
+  color: var(--text-primary);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+}
+
+html.theme-flat .dropdown-item:hover {
+  background: var(--bg-hover);
+  color: var(--accent-primary);
+}
+
+html.theme-flat .dropdown-item svg {
+  color: var(--text-muted);
+}
+
+html.theme-flat .dropdown-item:hover svg {
+  color: var(--accent-primary);
 }
 
 

@@ -130,6 +130,75 @@
     flex-shrink: 0;
 }
 
+/* ── Header Dropdown (Files) ── */
+.header-dropdown {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 6px;
+    min-width: 180px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    padding: 6px;
+    display: none;
+    z-index: 200;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.dropdown-menu.open {
+    display: flex;
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+    font-family: inherit;
+    text-align: left;
+}
+
+.dropdown-item:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.dropdown-item svg {
+    flex-shrink: 0;
+    color: var(--text-secondary);
+}
+
+.dropdown-item:hover svg {
+    color: var(--accent-primary);
+}
+
+.dropdown-arrow {
+    margin-left: 2px;
+    transition: transform var(--transition-fast);
+}
+
+.header-dropdown.open .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
 .main-content {
     display: flex;
     flex: 1;

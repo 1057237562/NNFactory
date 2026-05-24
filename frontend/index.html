@@ -99,12 +99,37 @@
                     </svg>
                     Datasets
                 </button>
-                <button id="weightsBtn" class="btn btn-secondary" title="Download Weights">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                        <path d="M7 1v7M4 5l3 3 3-3M2 10v2a1 1 0 001 1h8a1 1 0 001-1v-2" fill="none" stroke="currentColor" stroke-width="1.5"/>
-                    </svg>
-                    Weights
-                </button>
+                <div class="header-dropdown">
+                    <button id="filesBtn" class="btn btn-secondary" title="File operations">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M2 3.5A1.5 1.5 0 013.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12a1.5 1.5 0 01.439 1.061V12.5A1.5 1.5 0 0110.5 14h-7A1.5 1.5 0 012 12.5v-9z"/>
+                        </svg>
+                        Files
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" class="dropdown-arrow">
+                            <path d="M2 3l3 4 3-4"/>
+                        </svg>
+                    </button>
+                    <div class="dropdown-menu" id="filesDropdown">
+                        <button class="dropdown-item" data-action="export">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M8 1a.5.5 0 01.5.5v7.793l2.146-2.147a.5.5 0 01.708.708l-3 3a.5.5 0 01-.708 0l-3-3a.5.5 0 11.708-.708L7.5 9.293V1.5A.5.5 0 018 1zM2 13.5a.5.5 0 01.5-.5h11a.5.5 0 010 1h-11a.5.5 0 01-.5-.5z"/>
+                            </svg>
+                            Export Blueprint
+                        </button>
+                        <button class="dropdown-item" data-action="import">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M.5 9.9a.5.5 0 01.5.5v2.5a1 1 0 001 1h12a1 1 0 001-1v-2.5a.5.5 0 011 0v2.5a2 2 0 01-2 2H2a2 2 0 01-2-2v-2.5a.5.5 0 01.5-.5zM7.646 11.854a.5.5 0 00.708 0l3-3a.5.5 0 00-.708-.708L8.5 10.293V1.5a.5.5 0 00-1 0v8.793L5.354 8.146a.5.5 0 10-.708.708l3 3z"/>
+                            </svg>
+                            Import Blueprint
+                        </button>
+                        <button class="dropdown-item" data-action="weights">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M7 1v7M4 5l3 3 3-3M2 10v2a1 1 0 001 1h8a1 1 0 001-1v-2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                            </svg>
+                            Download Weights
+                        </button>
+                    </div>
+                </div>
                 <button id="exportBtn" class="btn btn-secondary" title="Export Blueprint">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                         <path d="M8 1a.5.5 0 01.5.5v7.793l2.146-2.147a.5.5 0 01.708.708l-3 3a.5.5 0 01-.708 0l-3-3a.5.5 0 11.708-.708L7.5 9.293V1.5A.5.5 0 018 1zM2 13.5a.5.5 0 01.5-.5h11a.5.5 0 010 1h-11a.5.5 0 01-.5-.5z"/>

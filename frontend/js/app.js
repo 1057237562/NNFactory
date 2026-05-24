@@ -170,11 +170,33 @@ class App {
         document.getElementById('validateBtn').addEventListener('click', () => this.validateBlueprint());
         document.getElementById('trainBtn').addEventListener('click', () => this.training.openTrainModal());
         document.getElementById('evaluateBtn').addEventListener('click', () => this.evaluator.open());
-        document.getElementById('exportBtn').addEventListener('click', () => this.exportBlueprint());
-        document.getElementById('weightsBtn').addEventListener('click', () => this.weights.openWeightsModal());
-        document.getElementById('importBtn').addEventListener('click', () => document.getElementById('fileInput').click());
         document.getElementById('fileInput').addEventListener('change', (e) => this.importBlueprint(e));
         document.getElementById('clearBtn').addEventListener('click', () => this.clearCanvas());
+
+        const filesBtn = document.getElementById('filesBtn');
+        const filesDropdown = document.getElementById('filesDropdown');
+        if (filesBtn && filesDropdown) {
+            filesBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                filesDropdown.classList.toggle('open');
+                filesBtn.closest('.header-dropdown').classList.toggle('open');
+            });
+            filesDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    filesDropdown.classList.remove('open');
+                    filesBtn.closest('.header-dropdown').classList.remove('open');
+                    const action = item.dataset.action;
+                    if (action === 'export') this.exportBlueprint();
+                    else if (action === 'import') document.getElementById('fileInput').click();
+                    else if (action === 'weights') this.weights.openWeightsModal();
+                });
+            });
+            document.addEventListener('click', () => {
+                filesDropdown.classList.remove('open');
+                filesBtn.closest('.header-dropdown').classList.remove('open');
+            });
+        }
         
         document.getElementById('closeModal').addEventListener('click', () => this.closeCodeModal());
         document.getElementById('closeTrainModal').addEventListener('click', () => this.training.closeTrainModal());
