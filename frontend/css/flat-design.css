@@ -1627,10 +1627,6 @@ html.theme-flat ::-webkit-scrollbar-thumb:hover {
   background: var(--border-light);
 }
 
-html.theme-flat .header-right-scroll::-webkit-scrollbar {
-  height: 4px;
-}
-
 
 /* ============================================================
    21. STYLE SWITCH TOGGLE BUTTON (in-header)
