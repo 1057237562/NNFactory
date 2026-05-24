@@ -143,18 +143,19 @@ class NodeManager {
         
         const isSelected = this.selectedNodes.has(node);
         const isDragging = this.draggingNode === node;
+        const flat = window.Utils.isFlatTheme();
         
         ctx.save();
         
-        if (isSelected || isDragging) {
+        if (!flat && (isSelected || isDragging)) {
             ctx.shadowColor = headerColor;
             ctx.shadowBlur = 15;
             ctx.shadowOffsetY = 4;
         }
         
-        ctx.fillStyle = '#1e1e2e';
-        ctx.strokeStyle = isSelected ? headerColor : '#3f3f46';
-        ctx.lineWidth = isSelected ? 2 : 1;
+        ctx.fillStyle = window.Utils.resolveCSSVar('--bg-card', '#1e1e2e');
+        ctx.strokeStyle = isSelected ? headerColor : window.Utils.resolveCSSVar('--border-color', '#3f3f46');
+        ctx.lineWidth = isSelected ? 2 : 1.5;
         ctx.beginPath();
         ctx.roundRect(x, y, w, h, 8);
         ctx.fill();
@@ -174,7 +175,7 @@ class NodeManager {
         ctx.fillText(displayName, x + w / 2, y + this.headerHeight / 2);
         
         ctx.font = '11px Inter, system-ui, sans-serif';
-        ctx.fillStyle = '#94a3b8';
+        ctx.fillStyle = window.Utils.resolveCSSVar('--text-muted', '#94a3b8');
         if (paramSummary) {
             ctx.fillText(paramSummary, x + w / 2, y + this.headerHeight + h / 2);
         }
@@ -192,14 +193,15 @@ class NodeManager {
     renderPort(ctx, x, y, type, headerColor, isSelected) {
         ctx.save();
         
-        // Port glow
-        if (isSelected) {
+        const flat = window.Utils.isFlatTheme();
+        
+        if (!flat && isSelected) {
             ctx.shadowColor = headerColor;
             ctx.shadowBlur = 10;
         }
         
         // Port circle
-        ctx.fillStyle = '#1e1e2e';
+        ctx.fillStyle = window.Utils.resolveCSSVar('--bg-card', '#1e1e2e');
         ctx.strokeStyle = headerColor;
         ctx.lineWidth = 2;
         ctx.beginPath();

@@ -52,6 +52,14 @@ function getLayerCategoryColor(category) {
     return LAYER_CATEGORY_COLORS[category] || '#94a3b8';
 }
 
+function resolveCSSVar(name, fallback) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+}
+
+function isFlatTheme() {
+    return document.documentElement.classList.contains('theme-flat');
+}
+
 function downloadBlob(blob, filename) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -63,7 +71,9 @@ function downloadBlob(blob, filename) {
 
 // Export to global scope
 window.Utils = {
-    downloadBlob
+    downloadBlob,
+    resolveCSSVar,
+    isFlatTheme
 };
 
 window.LayerUtils = {

@@ -178,7 +178,8 @@ class CanvasManager {
         const endX = startX + (this.canvas.width / this.scale) + this.gridSize * 2;
         const endY = startY + (this.canvas.height / this.scale) + this.gridSize * 2;
         
-        this.ctx.fillStyle = 'rgba(42, 42, 74, 0.4)';
+        const flat = document.documentElement.classList.contains('theme-flat');
+        this.ctx.fillStyle = flat ? 'rgba(209, 213, 219, 0.5)' : 'rgba(42, 42, 74, 0.4)';
         
         for (let x = startX; x < endX; x += this.gridSize) {
             for (let y = startY; y < endY; y += this.gridSize) {
@@ -209,12 +210,15 @@ class CanvasManager {
                 connections.indexOf(conn)
             );
             
+            const accentColor = window.Utils.resolveCSSVar('--accent-primary', '#6366f1');
+            const flat = window.Utils.isFlatTheme();
+            
             ctx.save();
-            ctx.strokeStyle = isSelected ? '#6366f1' : '#6366f1';
+            ctx.strokeStyle = accentColor;
             ctx.lineWidth = isSelected ? 3 : 2;
             ctx.lineCap = 'round';
-            ctx.shadowColor = '#6366f1';
-            ctx.shadowBlur = isSelected ? 10 : 0;
+            ctx.shadowColor = accentColor;
+            ctx.shadowBlur = (!flat && isSelected) ? 10 : 0;
             
             ctx.beginPath();
             ctx.moveTo(start.x, start.y);
@@ -227,7 +231,7 @@ class CanvasManager {
             const arrowX = end.x;
             const arrowY = end.y;
             
-            ctx.fillStyle = '#6366f1';
+            ctx.fillStyle = accentColor;
             ctx.beginPath();
             ctx.moveTo(arrowX, arrowY);
             ctx.lineTo(arrowX - arrowSize, arrowY - arrowSize / 2);
@@ -242,8 +246,9 @@ class CanvasManager {
             const temp = window.app.nodeManager.tempConnection;
             const end = nodeManager.getPortPosition(temp.startNode, temp.startPort);
             
+            const accentColor = window.Utils.resolveCSSVar('--accent-primary', '#6366f1');
             ctx.save();
-            ctx.strokeStyle = '#6366f1';
+            ctx.strokeStyle = accentColor;
             ctx.lineWidth = 2;
             ctx.setLineDash([5, 5]);
             
@@ -266,8 +271,10 @@ class CanvasManager {
         const h = Math.abs(nodeManager.boxEndY - nodeManager.boxStartY);
         
         this.ctx.save();
-        this.ctx.fillStyle = 'rgba(99, 102, 241, 0.08)';
-        this.ctx.strokeStyle = '#6366f1';
+        const flat = window.Utils.isFlatTheme();
+        const accentColor = window.Utils.resolveCSSVar('--accent-primary', '#6366f1');
+        this.ctx.fillStyle = flat ? 'rgba(59, 130, 246, 0.08)' : 'rgba(99, 102, 241, 0.08)';
+        this.ctx.strokeStyle = accentColor;
         this.ctx.lineWidth = 1.5;
         this.ctx.setLineDash([5, 5]);
         this.ctx.beginPath();

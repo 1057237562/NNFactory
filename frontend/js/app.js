@@ -270,6 +270,7 @@ class App {
             const isFlat = document.documentElement.classList.toggle('theme-flat');
             localStorage.setItem('nnfactory_theme', isFlat ? 'flat' : 'default');
             this.updateStyleSwitchButton(isFlat);
+            this.canvas.render();
         });
     }
 
