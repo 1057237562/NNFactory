@@ -1627,7 +1627,7 @@ html.theme-flat ::-webkit-scrollbar-thumb:hover {
   background: var(--border-light);
 }
 
-html.theme-flat .header-right::-webkit-scrollbar {
+html.theme-flat .header-right-scroll::-webkit-scrollbar {
   height: 4px;
 }
 

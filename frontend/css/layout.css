@@ -104,24 +104,30 @@
     gap: 10px;
     flex-wrap: nowrap;
     justify-content: flex-end;
-    overflow-x: auto;
-    overflow-y: hidden;
     flex-shrink: 1;
     min-width: 0;
+}
+
+.header-right-scroll {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
     scrollbar-width: thin;
     scrollbar-color: var(--border-light) transparent;
     -ms-overflow-style: auto;
 }
 
-.header-right::-webkit-scrollbar {
+.header-right-scroll::-webkit-scrollbar {
     height: 4px;
 }
 
-.header-right::-webkit-scrollbar-track {
+.header-right-scroll::-webkit-scrollbar-track {
     background: transparent;
 }
 
-.header-right::-webkit-scrollbar-thumb {
+.header-right-scroll::-webkit-scrollbar-thumb {
     background: var(--border-light);
     border-radius: 2px;
 }
